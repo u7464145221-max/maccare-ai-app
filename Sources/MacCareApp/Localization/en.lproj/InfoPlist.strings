@@ -1,0 +1,6 @@
+/* Teksty pytań macOS o dostęp – wersja angielska. */
+"NSDesktopFolderUsageDescription" = "MacCare AI only READS names and sizes to show the disk map. It changes nothing.";
+"NSDocumentsFolderUsageDescription" = "MacCare AI only READS names and sizes to show the disk map. It changes nothing.";
+"NSDownloadsFolderUsageDescription" = "MacCare AI only READS names and sizes to find large and old files. It changes nothing.";
+"NSRemovableVolumesUsageDescription" = "MacCare AI only READS sizes on external disks. It changes nothing.";
+"NSNetworkVolumesUsageDescription" = "MacCare AI only READS sizes on network disks. It changes nothing.";

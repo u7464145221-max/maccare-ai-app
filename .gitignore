@@ -1,0 +1,6 @@
+.build/
+build/
+*.xcuserstate
+.DS_Store
+.vscode/
+.build-l10n/

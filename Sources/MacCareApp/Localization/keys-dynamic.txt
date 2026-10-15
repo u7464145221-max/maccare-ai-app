@@ -1,0 +1,23 @@
+Skany
+Dziennik operacji
+Kwarantanna
+Tylko odczyt
+Edycja
+Mapa dysku
+Duże pliki
+Duplikaty
+Podobne zdjęcia
+Aplikacje
+Możliwe pozostałości
+Przegląd
+Autostart
+Porty
+Awarie
+Rozmiar
+Nazwa
+Data
+Nieużywane
+Wszystkie
+Nieużywane 90+ dni
+Tylko Intel
+Podpis spoza Apple
