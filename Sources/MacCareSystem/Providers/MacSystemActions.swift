@@ -97,8 +97,9 @@ public struct MacSystemActions: SystemActions {
         }
     }
 
-    // MARK: DNS (tylko odczyt)
-    static let dnsTestHosts = ["apple.com", "google.com", "cloudflare.com"]
+    // MARK: DNS (tylko odczyt, bez ruchu sieciowego)
+    // Audyt 16.10 (3.1): wcześniej narzędzie mierzyło czas rozwiązania apple.com/google.com/cloudflare.com (`getaddrinfo` → zapytania do serwerów DNS),
+    // czego nie obejmuje zasada „sieć tylko do 127.0.0.1 + aktualizacje”. Do decyzji właściciela pokazujemy wyłącznie lokalną konfigurację.
 
     /// Adresy serwerów z `scutil --dns` (unikalne, w kolejności).
     static func parseResolvers(_ out: String) -> (servers: [String], searchDomains: [String], resolverCount: Int) {
@@ -120,34 +121,8 @@ public struct MacSystemActions: SystemActions {
         let p = Self.parseResolvers(r.output)
         var lines = [String(localized: "Serwery DNS (scutil --dns): \(p.servers.isEmpty ? "brak danych" : p.servers.joined(separator: ", ")); konfiguracji resolverów: \(p.resolverCount).")]
         if !p.searchDomains.isEmpty { lines.append(String(localized: "Domeny wyszukiwania: \(p.searchDomains.prefix(5).joined(separator: ", "))")) }
-        lines.append(String(localized: "Czas rozwiązania nazw (getaddrinfo; wynik może pochodzić z pamięci podręcznej):"))
-        for h in Self.dnsTestHosts { lines.append("- \(h): \(await Self.resolveTime(h))") }
+        lines.append(String(localized: "Test rozwiązywania nazw jest wyłączony – wymagałby zapytań do serwerów DNS w internecie."))
         return lines.joined(separator: "\n")
-    }
-
-    private final class Once: @unchecked Sendable {
-        private let lock = NSLock(); private var done = false
-        func claim() -> Bool { lock.lock(); defer { lock.unlock() }; if done { return false }; done = true; return true }
-    }
-
-    static func resolveTime(_ host: String, timeout: TimeInterval = 5) async -> String {
-        await withCheckedContinuation { (cont: CheckedContinuation<String, Never>) in
-            let once = Once()
-            DispatchQueue.global(qos: .utility).async {
-                var hints = addrinfo(); hints.ai_socktype = SOCK_STREAM
-                var res: UnsafeMutablePointer<addrinfo>?
-                let t0 = DispatchTime.now()
-                let rc = getaddrinfo(host, nil, &hints, &res)
-                let ms = Double(DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds) / 1_000_000
-                if res != nil { freeaddrinfo(res) }
-                if once.claim() {
-                    cont.resume(returning: rc == 0 ? String(format: "%.0f ms", ms) : String(localized: "błąd (\(String(cString: gai_strerror(rc))))"))
-                }
-            }
-            DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
-                if once.claim() { cont.resume(returning: "brak odpowiedzi w \(Int(timeout)) s") }
-            }
-        }
     }
 
     // MARK: Ustawienia systemowe

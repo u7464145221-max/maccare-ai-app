@@ -52,6 +52,7 @@ final class UpdateChecker: ObservableObject {
 
     /// Tryb cotygodniowy (tylko gdy użytkownik go włączył).
     func checkIfDue(now: Date = Date()) async {
+        guard state != .checking else { return }
         let last = defaults.object(forKey: Self.lastCheckKey) as? Double
         guard UpdateCheck.isDue(enabled: weeklyEnabled, lastCheck: last.map { Date(timeIntervalSince1970: $0) }, now: now) else { return }
         await check()

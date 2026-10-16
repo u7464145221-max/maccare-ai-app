@@ -64,7 +64,10 @@ final class AppsStore: ObservableObject {
         }
         apps = collected
         let ids = Set(refs.map(\.bundleID).filter { !$0.isEmpty })
-        leftovers = await Task.detached(priority: .utility) { LeftoverFinder.grouped(LeftoverFinder.find(home: home, installedBundleIDs: ids)) }.value
+        leftovers = await Task.detached(priority: .utility) {
+            // audyt 2.2: wpis aplikacji, którą system zna w innym miejscu (dysk zewnętrzny, Pobrane…), nie jest pozostałością
+            LeftoverFinder.grouped(LeftoverFinder.find(home: home, installedBundleIDs: ids).filter { !AppInventory.launchServicesKnows($0.bundleID) })
+        }.value
         loading = false
     }
 

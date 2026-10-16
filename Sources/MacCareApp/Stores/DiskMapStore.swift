@@ -413,9 +413,9 @@ final class DiskMapStore: ObservableObject {
                 if !keepVisible {
                     rows = names.sorted { $0.localizedStandardCompare($1) == .orderedAscending }.map { ScanRow(id: dir + "/" + $0, name: $0, node: nil) }
                     for (i, r) in rows.enumerated() { rowIndex[r.id] = i }
-                    scanRows = rows
+                    if dir == current { scanRows = rows }
                 }
-                progress = ScanProgress(done: 0, total: total, latest: nil)
+                if dir == current { progress = ScanProgress(done: 0, total: total, latest: nil) }
             case .done(let r):
                 done += 1; latest = r.name
                 if r.inaccessible { noAccess.append(dir + "/" + r.name) }
@@ -426,7 +426,7 @@ final class DiskMapStore: ObservableObject {
                     if !keepVisible, let i = rowIndex[node.path] { rows[i].node = node }
                 }
                 // publikacje ograniczone do ~7 na sekundę – wiersze i pasek postępu zmieniają się płynnie, a mapa (bąbelki) nie jest przeliczana w trakcie skanu
-                if Date().timeIntervalSince(lastFlush) >= 0.15 {
+                if Date().timeIntervalSince(lastFlush) >= 0.15, dir == current {                // audyt 3.4: postęp tylko dla oglądanego folderu
                     lastFlush = Date()
                     if !keepVisible { scanRows = rows }
                     progress = ScanProgress(done: done, total: total, latest: latest)
@@ -448,6 +448,8 @@ final class DiskMapStore: ObservableObject {
                       inaccessible: grandsAccess[n.path]?.inaccessible ?? [], unreadableInside: grandsAccess[n.path]?.unreadable ?? 0, checkpoint: checkpoint)
             }
         }
+        // Audyt 3.4: użytkownik mógł w trakcie pomiaru wrócić do folderu z pamięci – wynik zapisany wyżej w pamięci, ale NIE publikowany na cudzym widoku.
+        guard dir == current else { return }
         nodes = collected; lastMeasuredAt = now                    // jedyna publikacja `nodes` w całym skanie
         inaccessible = noAccess; unreadableInside = unreadableIn
         for n in collected where selected.contains(n.path) { selectedSizes[n.path] = n.size }

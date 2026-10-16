@@ -13,7 +13,7 @@ public enum BenchmarkMetric: String, Codable, Sendable, CaseIterable {
     public var lowerIsBetter: Bool { self != .diskFreeBytes }
     /// Minimalna zmiana uznawana za praktycznie istotną (niezależnie od statystyki).
     public var minimumMeaningfulRelativeChange: Double {
-        switch self { case .diskFreeBytes: return 0.005; case .memoryPressureLevel: return 0.0; case .cpuWorkMs, .smallFileOpsMs: return 0.05; default: return 0.10 }
+        switch self { case .diskFreeBytes: return 0.005; case .memoryPressureLevel: return 0.0; case .cpuWorkMs, .smallFileOpsMs: return 0.20; default: return 0.10 }   // mikropomiary: zmienność tła sięga kilkudziesięciu %
     }
     public func format(_ v: Double) -> String {
         switch self {
@@ -61,6 +61,9 @@ public struct BenchmarkComparison: Codable, Sendable, Identifiable {
     public var metrics: [MetricComparison]
     public var conditionWarnings: [String]
     public var overall: EffectVerdict
+    /// Metryki, z których liczona jest ocena ogólna (nil = wszystkie). Pozostałe są tłem – operacja nie może na nie realnie wpłynąć.
+    public var decisiveMetrics: [BenchmarkMetric]? = nil
+    public func isDecisive(_ m: BenchmarkMetric) -> Bool { decisiveMetrics.map { $0.contains(m) } ?? true }
 
     public var summary: String {
         var s = String(localized: "Operacja: \(operation) — ogólnie: \(overall.label).")
@@ -77,7 +80,8 @@ public struct BenchmarkComparison: Codable, Sendable, Identifiable {
 public enum BenchmarkAnalyzer {
     /// Porównanie z testem Welcha (gdy ≥3 próbki po obu stronach) i progiem praktycznej istotności.
     /// Zmiana wolnego miejsca jest deterministyczna (1 próbka wystarcza), pozostałe metryki wymagają serii.
-    public static func compare(operation: String, before: MeasurementSet, after: MeasurementSet, alpha: Double = 0.05) -> BenchmarkComparison {
+    /// - Parameter decisive: metryki, na które operacja może realnie wpłynąć (np. przeniesienie do Kosza – tylko wolne miejsce); nil = wszystkie.
+    public static func compare(operation: String, before: MeasurementSet, after: MeasurementSet, alpha: Double = 0.05, decisive: Set<BenchmarkMetric>? = nil) -> BenchmarkComparison {
         var out: [MetricComparison] = []
         for metric in BenchmarkMetric.allCases {
             guard let b = before.samples[metric], let a = after.samples[metric], !b.isEmpty, !a.isEmpty else { continue }
@@ -103,15 +107,16 @@ public enum BenchmarkAnalyzer {
         if let x = before.backgroundCPUPercent, let y = after.backgroundCPUPercent, abs(x - y) > 20 { warnings.append(String(localized: "różne obciążenie tła (\(Int(x))% → \(Int(y))%)")) }
         if after.takenAt.timeIntervalSince(before.takenAt) > 3600 { warnings.append(String(localized: "pomiary dzieli ponad godzina – inne procesy mogły wpłynąć na wynik")) }
 
-        let decided = out.filter { $0.verdict == .improved || $0.verdict == .worsened }
+        let counted = out.filter { decisive?.contains($0.metric) ?? true }
+        let decided = counted.filter { $0.verdict == .improved || $0.verdict == .worsened }
         let overall: EffectVerdict
-        if out.isEmpty || out.allSatisfy({ $0.verdict == .insufficientData }) { overall = .insufficientData }
+        if counted.isEmpty || counted.allSatisfy({ $0.verdict == .insufficientData }) { overall = .insufficientData }
         else if decided.isEmpty { overall = .noMeasurableEffect }
         else if decided.allSatisfy({ $0.verdict == .improved }) { overall = .improved }
         else if decided.allSatisfy({ $0.verdict == .worsened }) { overall = .worsened }
         else { overall = .noMeasurableEffect }   // sprzeczne sygnały – nie ogłaszamy sukcesu
         return BenchmarkComparison(id: UUID().uuidString, operation: operation, before: before, after: after, metrics: out,
-                                   conditionWarnings: warnings, overall: overall)
+                                   conditionWarnings: warnings, overall: overall, decisiveMetrics: decisive.map { BenchmarkMetric.allCases.filter($0.contains) })
     }
 
     public static func mean(_ x: [Double]) -> Double { x.reduce(0, +) / Double(max(1, x.count)) }

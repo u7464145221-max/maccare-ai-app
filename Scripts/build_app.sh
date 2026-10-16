@@ -8,16 +8,21 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 CONFIG=release
-for a in "$@"; do [[ "$a" == "--debug" ]] && CONFIG=debug; done
+# --screenshots: build do zrzutów ekranu z kodem `ScreenshotDriver` (P3-3) – osobny katalog budowania, żeby nie mieszać z wydaniem.
+SWIFT_EXTRA=()
+for a in "$@"; do
+  [[ "$a" == "--debug" ]] && CONFIG=debug
+  [[ "$a" == "--screenshots" ]] && SWIFT_EXTRA=(--scratch-path .build-screens -Xswiftc -DMACCARE_SCREENSHOTS)
+done
 APP_NAME="MacCare AI"
 APP="build/${APP_NAME}.app"
 BUNDLE_ID="io.github.u7464145221-max.maccare"
-VERSION="${MACCARE_VERSION:-0.1.0}"
+VERSION="${MACCARE_VERSION:-0.2.0}"
 
 # Decyzja właściciela 15.10.2026: TYLKO Apple Silicon (arm64) – bez budowy uniwersalnej i bez wsparcia Intela.
 echo "== swift build -c $CONFIG (arm64)"
-swift build -c "$CONFIG" --arch arm64 --product MacCareApp
-BIN="$(swift build -c "$CONFIG" --arch arm64 --product MacCareApp --show-bin-path)/MacCareApp"
+swift build -c "$CONFIG" --arch arm64 --product MacCareApp ${SWIFT_EXTRA[@]+"${SWIFT_EXTRA[@]}"}
+BIN="$(swift build -c "$CONFIG" --arch arm64 --product MacCareApp ${SWIFT_EXTRA[@]+"${SWIFT_EXTRA[@]}"} --show-bin-path)/MacCareApp"
 [[ -x "$BIN" ]] || { echo "Brak pliku wykonywalnego: $BIN" >&2; exit 1; }
 ARCHS="$(lipo -archs "$BIN")"
 [[ "$ARCHS" == "arm64" ]] || { echo "Plik wykonywalny ma architektury „$ARCHS” – dozwolona wyłącznie arm64 (tylko Apple Silicon)" >&2; exit 1; }
@@ -50,7 +55,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleVersion</key><string>${VERSION}</string>
   <key>CFBundleDevelopmentRegion</key><string>pl</string>
   <key>CFBundleLocalizations</key><array><string>pl</string><string>en</string></array>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
@@ -78,22 +83,31 @@ for needle in {sys.argv[2], sys.argv[3], sys.argv[3].lower()}:          # ście�
         sys.exit(f"STOP: plik programu zawiera „{needle}” – wydanie zablokowane")
 print("prywatność pliku programu: OK (brak ścieżki domowej i nazwy konta)")
 PY
+# P3-3: wydanie bez trybu zrzutów – znacznik sterownika (nazwa funkcji ładowanej przez `dlsym`) nie może być w pliku programu
+if [[ ${#SWIFT_EXTRA[@]} -eq 0 && "$CONFIG" == "release" ]] && grep -aq "CGWindowListCreateImage" "$APP/Contents/MacOS/MacCareApp"; then
+  echo "STOP: wydanie zawiera kod sterownika zrzutów (P3-3)" >&2; exit 1
+fi
 
 echo "== podpis"
 SIGN_NAME="MacCare AI Local Dev"; KC="$PWD/.signing/maccare-dev.keychain-db"
 if [[ " $* " == *" --dev-identity "* ]]; then
   if ./Scripts/setup_signing.sh >/dev/null 2>&1 && security unlock-keychain -p "$(cat .signing/keychain.pw)" "$KC" 2>/dev/null \
-     && codesign --force --deep --sign "$SIGN_NAME" --keychain "$KC" "$APP" 2>/dev/null; then
+     && codesign --force --deep --options runtime --sign "$SIGN_NAME" --keychain "$KC" "$APP" 2>/dev/null; then
     echo "podpisano stałą tożsamością „$SIGN_NAME”"
   else
     echo "UWAGA: stała tożsamość niedostępna (niezaufany certyfikat?) – podpis ad-hoc. Patrz Scripts/one_time_setup.sh." >&2
-    codesign --force --deep --sign - "$APP"
+    codesign --force --deep --options runtime --sign - "$APP"
   fi
 else
-  codesign --force --deep --sign - "$APP"
+  codesign --force --deep --options runtime --sign - "$APP"
   echo "podpis ad-hoc (domyślnie). Stała tożsamość: --dev-identity"
 fi
 codesign --verify --verbose=1 "$APP" 2>&1 | head -2
+# Audyt 16.10 (2.5): Hardened Runtime – bez niego inny program z konta użytkownika mógłby wstrzyknąć bibliotekę (DYLD_INSERT_LIBRARIES) i korzystać
+# z Pełnego dostępu do dysku przyznanego MacCare. Działa także przy podpisie ad-hoc (Developer ID i notaryzacja – osobno, decyzja właściciela).
+SIGINFO="$(codesign -dv "$APP" 2>&1)"                     # najpierw całość do zmiennej: `grep -q` w potoku z pipefail dawał sporadyczny SIGPIPE
+[[ "$SIGINFO" == *"flags="*"runtime"* ]] || { echo "STOP: podpis bez Hardened Runtime" >&2; exit 1; }
+echo "Hardened Runtime: włączony"
 codesign -dr - "$APP" 2>&1 | grep designated
 echo "Zbudowano: $APP"
 

@@ -27,8 +27,23 @@ public struct OllamaProvider: LLMProvider {
         c.requestCachePolicy = .reloadIgnoringLocalCacheData
         c.urlCache = nil
         c.httpCookieStorage = nil
-        return URLSession(configuration: c)
+        // Audyt 16.10 (2.3): bez przekierowań – odpowiedź 30x z „lokalnego” portu nie może przenieść zapytania (z treścią) na inny adres.
+        return URLSession(configuration: c, delegate: NoRedirects.shared, delegateQueue: nil)
     }()
+
+    /// Odrzuca każde przekierowanie HTTP (odpowiedź 30x trafia do wywołującego jako zwykła odpowiedź, nie jest śledzona).
+    final class NoRedirects: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+        static let shared = NoRedirects()
+        func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                        newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) { completionHandler(nil) }
+    }
+
+    /// Audyt 16.10 (2.3): Ollama potrafi udostępniać pod lokalnym adresem modele działające w chmurze (`…-cloud`, pola `remote_host`/`remote_model`) –
+    /// zapytanie do nich opuszcza Maca. Inwariant „AI tylko lokalnie”: takie modele są pomijane wszędzie i odrzucane przy rozmowie.
+    public static func isRemoteModelName(_ name: String) -> Bool {
+        let n = name.lowercased()
+        return n.hasSuffix("-cloud") || n.hasSuffix(":cloud") || n.contains("-cloud:") || n.contains(":cloud-")
+    }
 
     public init(baseURL: URL = URL(string: "http://127.0.0.1:11434")!, model: String = "qwen2.5:7b", contextWindowTokens: Int = 8192, session: URLSession = OllamaProvider.loopbackSession) {
         self.baseURL = baseURL; self.model = model; self.contextWindowTokens = contextWindowTokens; self.session = session
@@ -63,7 +78,9 @@ public struct OllamaProvider: LLMProvider {
     public static func parseModelInfos(_ data: Data) -> [ModelInfo] {
         guard let v = try? JSONValue.parse(String(decoding: data, as: UTF8.self)) else { return [] }
         return v["models"]?.arrayValue?.compactMap { m in
-            m["name"]?.stringValue.map { ModelInfo(name: $0, sizeBytes: UInt64(max(0, m["size"]?.numberValue ?? 0))) }
+            guard let name = m["name"]?.stringValue, !isRemoteModelName(name),
+                  (m["remote_host"]?.stringValue ?? "").isEmpty, (m["remote_model"]?.stringValue ?? "").isEmpty else { return nil }   // model w chmurze – pomijany
+            return ModelInfo(name: name, sizeBytes: UInt64(max(0, m["size"]?.numberValue ?? 0)))
         } ?? []
     }
 
@@ -82,12 +99,12 @@ public struct OllamaProvider: LLMProvider {
     public func listModels() async throws -> [String] {
         var req = URLRequest(url: baseURL.appendingPathComponent("api/tags")); req.timeoutInterval = 3
         let (data, _) = try await session.data(for: req)
-        let v = try JSONValue.parse(String(decoding: data, as: UTF8.self))
-        return v["models"]?.arrayValue?.compactMap { $0["name"]?.stringValue } ?? []
+        return Self.parseModelInfos(data).map(\.name)                                     // tylko modele lokalne (bez chmurowych)
     }
 
     public func complete(_ messages: [LLMMessage], options: LLMOptions) async throws -> String {
         guard Self.isLoopback(baseURL) else { throw LLMError.unavailable(String(localized: "adres nielokalny")) }
+        guard !Self.isRemoteModelName(model) else { throw LLMError.unavailable(String(localized: "model działa w chmurze – MacCare używa wyłącznie modeli lokalnych")) }
         var req = URLRequest(url: baseURL.appendingPathComponent("api/chat"))
         req.httpMethod = "POST"; req.timeoutInterval = 180
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")

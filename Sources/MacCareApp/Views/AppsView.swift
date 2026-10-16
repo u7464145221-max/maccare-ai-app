@@ -8,6 +8,9 @@ struct AppsView: View {
     @ObservedObject var store: AppsStore
     @State private var tab = Tab.apps
     @State private var uninstallTarget: InstalledApp?
+    /// F20: zaznaczone pozostałości (ŚCIEŻKI) – domyślnie nic (to heurystyka, wybór świadomy). Audyt 2.2: Application Support i kontenery
+    /// wybiera się osobnym polem – nie przechodzą razem z pamięcią podręczną i preferencjami.
+    @State private var chosenLeftovers: Set<String> = []
     enum Tab: String, CaseIterable { case apps = "Aplikacje", leftovers = "Możliwe pozostałości" }
 
     var body: some View {
@@ -40,6 +43,12 @@ struct AppsView: View {
                 .font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary).frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 24).padding(.top, 14).padding(.bottom, 16)
+        .onReceive(NotificationCenter.default.publisher(for: .init("MacCareScreenshotApps"))) { n in   // tylko tryb zrzutów (W8)
+            guard let what = n.object as? String else { return }
+            if what == "leftovers" { tab = .leftovers; chosenLeftovers = Set((store.leftovers ?? []).filter { $0.bundleID.hasPrefix("com.oldvendor") }.flatMap { $0.safeItems.map(\.path) }) }
+            else if what == "none" { uninstallTarget = nil }
+            else if let a = store.apps.first(where: { $0.path == what }) { tab = .apps; uninstallTarget = a }
+        }
         .sheet(item: $uninstallTarget) { app in
             UninstallChooser(app: app, home: model.home, onCancel: { uninstallTarget = nil }) { items in
                 uninstallTarget = nil
@@ -85,30 +94,58 @@ struct AppsView: View {
         }
     }
 
+    /// Pole wyboru dla zestawu wpisów: zaznaczone, gdy wszystkie są wybrane.
+    private func pathsBinding(_ items: [AppLeftover]) -> Binding<Bool> {
+        Binding(get: { !items.isEmpty && items.allSatisfy { chosenLeftovers.contains($0.path) } },
+                set: { on in for it in items { if on { chosenLeftovers.insert(it.path) } else { chosenLeftovers.remove(it.path) } } })
+    }
+
     private var leftoversList: some View {
         SurfaceCard(padding: 0, radius: 24) {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(store.leftovers.map { "\(Plural.counted($0.count, one: "możliwa pozostałość", few: "możliwe pozostałości", many: "możliwych pozostałości")) · \(ByteFormat.string(store.leftoversSize))" } ?? String(localized: "Szukam pozostałości…"))
                         .font(Theme.Typo.headline).foregroundStyle(Theme.Palette.text)
-                    Text("Wpisy w ~/Library nazwane identyfikatorem aplikacji, której nie ma w folderach Programy. To heurystyka: część może należeć do narzędzi bez aplikacji (np. wiersz poleceń) albo do aplikacji na innym dysku – sprawdź przed usunięciem.")
+                    Text("Wpisy w ~/Library nazwane identyfikatorem aplikacji, której system nie zna – ani w folderach Programy, ani w innym miejscu. To heurystyka: część może należeć do narzędzi bez aplikacji (np. wiersz poleceń) – sprawdź przed usunięciem. Dane aplikacji (Application Support, kontenery) zaznaczasz osobno.")
                         .font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary).fixedSize(horizontal: false, vertical: true)
                 }.padding(14)
                 Divider().opacity(0.3)
                 List(store.leftovers ?? []) { g in
                     HStack(spacing: 10) {
+                        if g.safeItems.isEmpty { Color.clear.frame(width: 28, height: 28) }
+                        else {
+                            Toggle("", isOn: pathsBinding(g.safeItems)).labelsHidden().toggleStyle(.largeCheckbox).accessibilityLabel(g.bundleID)
+                        }
                         Image(systemName: "shippingbox").foregroundStyle(Theme.Palette.textSecondary).frame(width: 28)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(g.bundleID).font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.Palette.text).lineLimit(1).truncationMode(.middle)
                             Text("\(g.locations) · ostatnia zmiana \(g.lastModified.formatted(date: .abbreviated, time: .omitted))").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
                         }
                         Spacer(minLength: 6)
+                        if !g.riskyItems.isEmpty {
+                            Toggle(isOn: pathsBinding(g.riskyItems)) { Text("dane aplikacji") }.toggleStyle(.largeCheckbox)
+                                .foregroundStyle(Theme.Palette.warning)
+                                .help(String(localized: "Application Support i kontenery mogą zawierać dokumenty i ustawienia – zaznacz tylko, jeśli na pewno nie wrócisz do tej aplikacji"))
+                        }
                         Text(ByteFormat.string(g.size)).font(Theme.Typo.metricSmall).foregroundStyle(Theme.Palette.text)
                         Button("Finder") { NSWorkspace.shared.activateFileViewerSelecting(g.items.map { URL(fileURLWithPath: $0.path) }) }.buttonStyle(.soft)
                     }
                 }
                 .listStyle(.plain).scrollContentBackground(.hidden)
                 .overlay { if store.leftovers?.isEmpty == true { Text("Nie znaleziono pozostałości.").foregroundStyle(Theme.Palette.textSecondary) } }
+                Divider().opacity(0.3)
+                HStack(spacing: 12) {
+                    let picked = (store.leftovers ?? []).flatMap(\.items).filter { chosenLeftovers.contains($0.path) }
+                    Text("Zaznaczono: \(picked.count) · \(ByteFormat.string(picked.reduce(0) { $0 + $1.size }))").font(Theme.Typo.caption.monospacedDigit()).foregroundStyle(Theme.Palette.textSecondary)
+                    Spacer()
+                    Button(model.isReadOnlyMode ? String(localized: "Podgląd przeniesienia do Kosza") : String(localized: "Przenieś zaznaczone do Kosza…")) {
+                        let paths = picked.map(\.path)
+                        chosenLeftovers = []
+                        Task { await model.proposeLeftovers(paths: paths) }
+                    }
+                    .buttonStyle(.prominent(.apps)).disabled(picked.isEmpty)
+                    .help(model.isReadOnlyMode ? model.previewHint : String(localized: "Zaznaczone pozostałości trafią do Kosza – przywrócisz je w Finderze"))
+                }.padding(14)
             }
         }
     }

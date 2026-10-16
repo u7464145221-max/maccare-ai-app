@@ -33,7 +33,7 @@ public enum EditScope: String, Sendable, CaseIterable {
     public func allows(_ op: MutatingOperation) -> Bool {
         switch self {
         case .trashSelectedOnly: return op == .trashSelected
-        case .trashOperations: return [.trashSelected, .cleanupToTrash, .uninstallToTrash].contains(op)
+        case .trashOperations: return [.trashSelected, .cleanupToTrash, .uninstallToTrash, .leftoversToTrash].contains(op)
         case .full: return true
         }
     }
@@ -54,6 +54,8 @@ public enum MutatingOperation: String, Sendable, CaseIterable {
     case cleanupToTrash
     /// Odinstalowanie aplikacji: pakiet i wybrane dane aplikacji do systemowego Kosza (decyzja właściciela 15.10.2026).
     case uninstallToTrash
+    /// Pozostałości po odinstalowanych aplikacjach do systemowego Kosza (decyzja właściciela 15.10.2026, wieczór).
+    case leftoversToTrash
     case quarantineMove, quarantineRestore
     /// Trwałe usunięcie wpisów kwarantanny (także automatyczne po 7 dniach).
     case quarantinePurge
@@ -74,6 +76,7 @@ public enum MutatingOperation: String, Sendable, CaseIterable {
         case .trashSelected: return String(localized: "Przenieś do Kosza")
         case .cleanupToTrash: return String(localized: "Porządki – przeniesienie do Kosza")
         case .uninstallToTrash: return String(localized: "Odinstalowanie aplikacji do Kosza")
+        case .leftoversToTrash: return String(localized: "Pozostałości po aplikacjach do Kosza")
         case .quarantineMove: return String(localized: "Czyszczenie przez kwarantannę")
         case .quarantineRestore: return String(localized: "Przywrócenie z kwarantanny")
         case .quarantinePurge: return String(localized: "Trwałe usunięcie z kwarantanny")
@@ -187,7 +190,7 @@ public final class ExecutionState: @unchecked Sendable {
 /// Model AI nie ma żadnego narzędzia zmieniającego tryb (test `ExecutionModeSwitchTests`).
 public enum ExecutionGuard {
     public static let message = String(localized: "Tryb tylko do odczytu – MacCare nie wprowadza zmian w systemie")
-    public static let scopeMessage = String(localized: "Poza zakresem Edycji – w trybie Edycja działa przenoszenie do Kosza (zaznaczone pliki, Porządki, odinstalowanie); kwarantanna, opróżnianie Kosza i operacje systemowe czekają na poprawki bezpieczeństwa")
+    public static let scopeMessage = String(localized: "Poza zakresem Edycji – w trybie Edycja działa przenoszenie do Kosza (zaznaczone pliki, Porządki, odinstalowanie, pozostałości po aplikacjach); kwarantanna, opróżnianie Kosza i operacje systemowe czekają na poprawki bezpieczeństwa")
 
     /// Jedyny stan produkcyjny. Zawsze startuje w `.readOnly` (nie jest zapisywany ani odtwarzany).
     public static let shared = ExecutionState()

@@ -1,8 +1,8 @@
 # MacCare AI
 
-Aplikacja do dbania o Maca: pokazuje, co zajmuje miejsce na dysku, co można bezpiecznie posprzątać, jak wyglądają zabezpieczenia i co obciąża komputer. Ma lokalnego asystenta AI, który odpowiada na pytania o Twojego Maca na podstawie pomiarów.
+Aplikacja do dbania o Maca: pokazuje, co zajmuje miejsce na dysku, co można bezpiecznie posprzątać, jak wyglądają zabezpieczenia i co obciąża komputer. Ma lokalnego asystenta AI, który ma odpowiadać na pytania o Twojego Maca na podstawie pomiarów (wymaga Ollamy z modelem zainstalowanym na Macu albo Apple Intelligence; w tej wersji jest wczesny i nie był jeszcze sprawdzony w pełnej rozmowie).
 
-**Zasada nadrzędna: po uruchomieniu program tylko czyta.** Zmiany są możliwe wyłącznie w trybie Edycja, który włączasz sam i który wyłącza się po 15 minutach bezczynności. Nawet wtedy wszystko trafia do Kosza macOS, skąd możesz to przywrócić – nic nie jest kasowane na stałe.
+**Zasada nadrzędna: po uruchomieniu program tylko czyta.** Zmiany są możliwe wyłącznie w trybie Edycja, który włączasz sam i który wyłącza się po bezczynności (domyślnie 15 minut). Nawet wtedy wszystko trafia do Kosza macOS, skąd możesz to przywrócić – nic nie jest kasowane na stałe.
 
 ## Co potrafi
 - **Smart Scan** – jeden skan: porządki, ochrona i wydajność z oceną stanu i dowodami.
@@ -11,7 +11,7 @@ Aplikacja do dbania o Maca: pokazuje, co zajmuje miejsce na dysku, co można bez
 - **Ochrona** – SIP, Gatekeeper, FileVault, zapora, autostart z weryfikacją podpisów, otwarte porty, awarie.
 - **Wydajność** – procesor, pamięć, bateria, temperatura, najbardziej obciążające procesy.
 - **Aplikacje** – lista z rozmiarem i podpisem, możliwe pozostałości, odinstalowanie przez Kosz.
-- **Asystent AI** – wyłącznie lokalnie (Ollama na Twoim Macu albo model Apple na urządzeniu), tylko narzędzia odczytu.
+- **Asystent AI** – wyłącznie lokalnie (Ollama z modelem na Twoim Macu – modele „cloud” są odrzucane – albo model Apple na urządzeniu), tylko narzędzia odczytu. Wersja wczesna.
 - Interfejs po polsku i po angielsku (wg języka systemu).
 
 ## Wymagania
@@ -40,4 +40,4 @@ Wystarczą Command Line Tools (bez Xcode):
 ---
 
 ## English
-MacCare AI is a Mac care app: disk map, safe cleanup, security and performance overview, and a local-only AI assistant. **After launch it only reads.** Changes are possible only in Edit mode, which you turn on yourself and which turns off after 15 minutes of inactivity; even then everything goes to the macOS Trash and can be restored. Apple Silicon and macOS 14+ only. The app is not yet signed with an Apple Developer ID: on first launch use *System Settings → Privacy & Security → Open Anyway*. Privacy details: [docs/PRIVACY.md](docs/PRIVACY.md).
+MacCare AI is a Mac care app: disk map, safe cleanup, security and performance overview, and a local-only AI assistant (early; needs Ollama with a model on your Mac or Apple Intelligence). **After launch it only reads.** Changes are possible only in Edit mode, which you turn on yourself and which turns off after a period of inactivity (15 minutes by default); even then everything goes to the macOS Trash and can be restored. Apple Silicon and macOS 14+ only. The app is not yet signed with an Apple Developer ID: on first launch use *System Settings → Privacy & Security → Open Anyway*. Privacy details: [docs/PRIVACY.md](docs/PRIVACY.md).

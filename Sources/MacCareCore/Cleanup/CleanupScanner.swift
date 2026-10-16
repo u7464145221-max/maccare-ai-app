@@ -60,7 +60,8 @@ public struct CleanupScanner: Sendable {
     }
 
     /// - Parameter runningBundleIDs: identyfikatory uruchomionych aplikacji (z NSWorkspace na macOS).
-    public func scan(runningBundleIDs: Set<String> = [], only categories: Set<CleanupCategory>? = nil,
+    /// - Parameter runningTools: znaczniki pracujących narzędzi wiersza poleceń (`ToolActivity`, P2-3) – ich pamięć podręczna jest „w użyciu”.
+    public func scan(runningBundleIDs: Set<String> = [], runningTools: Set<String> = [], only categories: Set<CleanupCategory>? = nil,
                      isCancelled: @Sendable () -> Bool = { false }) -> CleanupScanResult {
         let start = clock.now
         let roots = CleanupCatalog.allowedRoots(rules, home: home, tempDir: tempDir)
@@ -105,6 +106,7 @@ public struct CleanupScanner: Sendable {
                     let name = (t as NSString).lastPathComponent
                     // aplikacja-właściciel działa (wskazana w regule albo – np. ~/Library/Caches/com.spotify.client – po nazwie elementu)
                     let ownerRunning = RunningOwners.ownerRunning(ruleOwners: rule.ownerBundleIDs, itemName: name, running: running)
+                        || ToolActivity.toolRunning(ruleID: rule.id, runningTools: runningTools)
                     out.append(CleanupCandidate(path: t, name: name, ruleID: rule.id, category: rule.category,
                                                 description: rule.explanation, owner: rule.owner, allocatedSize: u.allocated,
                                                 reclaimableSize: u.reclaimable, modified: st.modified, risk: rule.risk,

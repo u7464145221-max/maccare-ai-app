@@ -6,7 +6,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT="$(mktemp -d)"
-swift build --scratch-path .build-l10n --target MacCareApp -Xswiftc -emit-localized-strings -Xswiftc -emit-localized-strings-path -Xswiftc "$OUT" >/dev/null
+# Błąd kompilacji NIE może przejść po cichu (wtedy keys.txt zostałby stary, a test kompletności – fałszywie zielony): pokazujemy błędy i kończymy kodem ≠ 0.
+if ! swift build --scratch-path .build-l10n --target MacCareApp -Xswiftc -emit-localized-strings -Xswiftc -emit-localized-strings-path -Xswiftc "$OUT" > "$OUT/build.log" 2>&1; then
+  grep -E "error:" "$OUT/build.log" | sort -u | head -20 >&2; echo "STOP: kompilacja do ekstrakcji kluczy nie powiodła się – keys.txt bez zmian" >&2; exit 1
+fi
 python3 - "$OUT" Sources/MacCareApp/Localization/keys.txt Sources/MacCareApp/Localization/keys-dynamic.txt <<'PY'
 import json, sys, pathlib
 keys = set()

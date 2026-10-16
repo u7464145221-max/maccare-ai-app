@@ -50,8 +50,8 @@ public final class QuarantineStore: @unchecked Sendable {
     public init(root: URL, clock: Clock = SystemClock(), home: String = PathTools.home, tempDir: String = NSTemporaryDirectory()) {
         self.root = root; self.clock = clock
         policy = PathPolicy(home: home, ruleRoots: CleanupCatalog.allowedRoots(home: home, tempDir: tempDir))
-        try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        if let d = try? Data(contentsOf: manifestURL), let e = try? JSONDecoder.iso.decode([QuarantineEntry].self, from: d) { entries = e }
+        try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)   // try? świadomie: brak katalogu ⇒ pusta kwarantanna; zapis i tak zgłosi błąd
+        if let d = try? Data(contentsOf: manifestURL), let e = try? JSONDecoder.iso.decode([QuarantineEntry].self, from: d) { entries = e }   // try? świadomie: brak/uszkodzenie ⇒ odtworzenie z opisów (P1-3)
         else { rebuildFromSidecars() }
         recoverInterrupted()
     }
@@ -66,12 +66,12 @@ public final class QuarantineStore: @unchecked Sendable {
     private func rebuildFromSidecars() {
         let fm = FileManager.default
         var found: [QuarantineEntry] = []
-        for batch in (try? fm.contentsOfDirectory(atPath: root.path)) ?? [] where batch != ".journal" && !batch.hasPrefix("manifest") {
+        for batch in (try? fm.contentsOfDirectory(atPath: root.path)) ?? [] where batch != ".journal" && !batch.hasPrefix("manifest") {   // try? świadomie: nieczytelny katalog ⇒ brak wpisów do odtworzenia
             let bdir = root.appendingPathComponent(batch, isDirectory: true)
-            for id in (try? fm.contentsOfDirectory(atPath: bdir.path)) ?? [] {
+            for id in (try? fm.contentsOfDirectory(atPath: bdir.path)) ?? [] {   // try? świadomie: jw.
                 let dir = bdir.appendingPathComponent(id, isDirectory: true)
-                guard let d = try? Data(contentsOf: dir.appendingPathComponent(Self.sidecarName)),
-                      var e = try? JSONDecoder.iso.decode(QuarantineEntry.self, from: d), e.id == id, e.batchID == batch else { continue }
+                guard let d = try? Data(contentsOf: dir.appendingPathComponent(Self.sidecarName)),   // try? świadomie: jw.
+                      var e = try? JSONDecoder.iso.decode(QuarantineEntry.self, from: d), e.id == id, e.batchID == batch else { continue }   // try? świadomie: brak lub uszkodzony opis ⇒ wpis pomijany (dane zostają na dysku)
                 let stored = dir.appendingPathComponent((e.storedPath as NSString).lastPathComponent).path
                 guard isQuarantineEntryPath(stored), FileStat.of(stored) != nil else { continue }
                 e.storedPath = stored
@@ -87,7 +87,13 @@ public final class QuarantineStore: @unchecked Sendable {
             // bez kopii uszkodzonego manifestu NIE nadpisujemy go (wpisy i tak są w pamięci, a opisy obok danych zostają)
             guard (try? fm.moveItem(at: manifestURL, to: root.appendingPathComponent("manifest.json.corrupt-\(Int(clock.now.timeIntervalSince1970))"))) != nil else { return }   // try? świadomie: wynik sprawdzany
         }
-        try? saveManifest()
+        saveManifestReporting()
+    }
+
+    /// Ostatni nieudany zapis manifestu (P2-17) – wpisy są wtedy w pamięci i w opisach obok danych, ale UI powinno o tym wiedzieć.
+    public private(set) var lastManifestError: String?
+    private func saveManifestReporting() {
+        do { try saveManifest(); lastManifestError = nil } catch { lastManifestError = String(describing: error) }
     }
 
     /// - Parameter allowedDirectory: zakres dla wywołań spoza reguł czyszczenia (np. `~/Library/LaunchAgents` przy wyłączaniu agenta) – rozwiązana ścieżka
@@ -110,11 +116,13 @@ public final class QuarantineStore: @unchecked Sendable {
         try fm.createDirectory(at: dir, withIntermediateDirectories: true)
         let dest = dir.appendingPathComponent((path as NSString).lastPathComponent)
         let entry = QuarantineEntry(id: id, batchID: batchID, originalPath: path, storedPath: dest.path, size: size, ruleID: ruleID, quarantinedAt: clock.now)
-        // 1) zapis intencji (journal) – po awarii wiemy, co przywrócić
+        // 1) zapis intencji (journal) i opisu obok danych (P1-3) – PRZED przeniesieniem (P2-17): bez opisu nic nie jest przenoszone,
+        //    a opis nie może nadpisać przenoszonego elementu o tej samej nazwie (wtedy przeniesienie się nie uda i nic nie ruszamy)
         try writeJournal(entry)
+        do { try JSONEncoder.iso.encode(entry).write(to: dir.appendingPathComponent(Self.sidecarName), options: .withoutOverwriting) }
+        catch { try? fm.removeItem(at: dir); clearJournal(entry.id); throw QuarantineError.moveFailed(error.localizedDescription) }   // try? świadomie: pusty katalog wpisu (tylko nasz opis), błąd jest zgłaszany
         do { try fm.moveItem(atPath: path, toPath: dest.path) }
         catch { try? fm.removeItem(at: dir); clearJournal(entry.id); throw QuarantineError.moveFailed(error.localizedDescription) }   // try? świadomie: pusty katalog wpisu po nieudanym przeniesieniu; błąd przeniesienia i tak jest zgłaszany
-        try? JSONEncoder.iso.encode(entry).write(to: dir.appendingPathComponent(Self.sidecarName), options: .atomic)     // P1-3: opis obok danych
         entries.append(entry)
         try saveManifest()
         clearJournal(entry.id)
@@ -171,7 +179,7 @@ public final class QuarantineStore: @unchecked Sendable {
             freed += e.size
             return true
         }
-        try? saveManifest()
+        saveManifestReporting()
         return PurgeOutcome(freed: freed, refused: refused, failed: failed)
     }
 
@@ -200,16 +208,16 @@ public final class QuarantineStore: @unchecked Sendable {
     /// kwarantanną nie jest kasowane (dziennik to dane z dysku, nie zaufane wejście). Kasowany jest wyłącznie sam plik dziennika (leży w `.journal`).
     private func recoverInterrupted() {
         guard ExecutionGuard.allows(.quarantineRecover) else { return }
-        let files = (try? FileManager.default.contentsOfDirectory(at: journalDir, includingPropertiesForKeys: nil)) ?? []
+        let files = (try? FileManager.default.contentsOfDirectory(at: journalDir, includingPropertiesForKeys: nil)) ?? []   // try? świadomie: brak dziennika ⇒ nic do dokończenia
         for f in files {
-            guard let d = try? Data(contentsOf: f), let e = try? JSONDecoder.iso.decode(QuarantineEntry.self, from: d) else { continue }
+            guard let d = try? Data(contentsOf: f), let e = try? JSONDecoder.iso.decode(QuarantineEntry.self, from: d) else { continue }   // try? świadomie: uszkodzony wpis dziennika jest pomijany
             if isQuarantineEntryPath(e.storedPath) {
                 if FileStat.of(e.storedPath) != nil, !entries.contains(where: { $0.id == e.id }) { entries.append(e) }
                 else if FileStat.of(e.storedPath) == nil { try? FileManager.default.removeItem(atPath: (e.storedPath as NSString).deletingLastPathComponent) }   // try? świadomie: pusty katalog niedokończonego wpisu w kwarantannie
             }
             try? FileManager.default.removeItem(at: f)   // try? świadomie: przetworzony plik dziennika (leży w `.journal`)
         }
-        try? saveManifest()
+        saveManifestReporting()
     }
 
     private func saveManifest() throws {

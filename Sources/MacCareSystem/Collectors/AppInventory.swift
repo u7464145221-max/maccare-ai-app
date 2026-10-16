@@ -31,6 +31,19 @@ public struct InstalledApp: Sendable, Identifiable, Hashable {
 
 /// Inwentarz zainstalowanych aplikacji (tylko odczyt): `/Applications`, `~/Applications`, `/System/Applications`.
 public enum AppInventory {
+    /// Audyt 16.10 (2.2): czy system (LaunchServices) zna aplikację o tym identyfikatorze – w DOWOLNYM miejscu (dysk zewnętrzny, Pobrane, głęboko
+    /// w podfolderach), a nie tylko w przeglądanych katalogach Programów. Sprawdza też identyfikator „rodzica” (`com.x.App.helper` → `com.x.App`).
+    /// Tylko odczyt bazy LaunchServices.
+    public static func launchServicesKnows(_ bundleID: String) -> Bool {
+        var parts = bundleID.split(separator: ".").map(String.init)
+        while parts.count >= 3 {
+            let id = parts.joined(separator: ".")
+            if let urls = LSCopyApplicationURLsForBundleIdentifier(id as CFString, nil)?.takeRetainedValue() as? [URL], !urls.isEmpty { return true }
+            parts.removeLast()
+        }
+        return false
+    }
+
     public struct Ref: Sendable { public let path: String; public let name: String; public let bundleID: String; public let version: String; public let executable: String? }
 
     /// Szybkie wyliczenie aplikacji (bez rozmiarów i podpisów) – wynik pojawia się natychmiast.

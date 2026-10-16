@@ -3,7 +3,7 @@ import MacCareCore
 import MacCareSystem
 
 enum HistoryTab: String, CaseIterable, Identifiable {
-    case scans = "Skany", operations = "Dziennik operacji", quarantine = "Kwarantanna"
+    case scans = "Skany", operations = "Dziennik operacji", measurements = "Pomiary", quarantine = "Kwarantanna"
     var id: String { rawValue }
 }
 
@@ -45,7 +45,7 @@ struct SheetContent: Identifiable {
     /// Tytuł przycisku zatwierdzenia (domyślnie „Zatwierdź i wykonaj”).
     var approveTitle: String {
         if toolName == "uninstall_app_to_trash" { return String(localized: "Odinstaluj do Kosza") }
-        return ["trash_selected", "trash_cleanup_items"].contains(toolName) ? String(localized: "Przenieś do Kosza") : String(localized: "Zatwierdź i wykonaj")
+        return ["trash_selected", "trash_cleanup_items", "trash_app_leftovers"].contains(toolName) ? String(localized: "Przenieś do Kosza") : String(localized: "Zatwierdź i wykonaj")
     }
     /// Gdy operacji nie odblokuje nawet Edycja (zakres `.trashSelectedOnly`): komunikat o dostępności po poprawkach bezpieczeństwa.
     var futureNote: String?
@@ -76,6 +76,8 @@ final class AppModel: ObservableObject {
     let apps: AppsStore
     /// Aktualizacje z publicznego repozytorium GitHub (decyzja właściciela 15.10.2026) – tylko na żądanie albo raz w tygodniu po włączeniu.
     let updates = UpdateChecker()
+    /// F21: powiadomienia o ważnych sprawach (domyślnie wyłączone).
+    let notifier = ImportantNotifier()
 
     // MARK: Nawigacja
     @Published var module: AppModule = .smartScan
@@ -245,6 +247,10 @@ final class AppModel: ObservableObject {
     @Published private(set) var operations: [AuditRecord] = []
     @Published private(set) var quarantineEntries: [QuarantineEntry] = []
     @Published private(set) var measuredReclaimedTotal: Int64 = 0
+    /// P2-17: nieudane zapisy/odczyty historii albo spisu kwarantanny – pokazywane w Historii zamiast przemilczenia.
+    @Published private(set) var historyProblem: String?
+    /// F22: porównania przed/po operacjach (najnowsze najpierw).
+    @Published private(set) var benchmarks: [BenchmarkComparison] = []
 
     private var liveTask: Task<Void, Never>?
     private var started = false
@@ -290,7 +296,12 @@ final class AppModel: ObservableObject {
         provider = MacDiagnosticsProvider(history: store, settings: .init(home: home, tempDir: tmp))
         let actions = MacSystemActions(quarantine: quarantine, home: home)
         let registry = StandardTools.registry(provider: provider, actions: actions, quarantine: quarantine, trash: trash ?? MacTrash(home: home), home: home, tempDir: tmp, appDataDirs: [dir.path],
-                                             runningApps: { await RunningApps.all() })          // F15: odinstalowanie tylko aplikacji, która nie działa
+                                             runningApps: { await RunningApps.all() },          // F15: odinstalowanie tylko aplikacji, która nie działa
+                                             installedApps: { [home] in                          // F20: pustej listy (nieczytelne katalogi) nie uznajemy za „nic nie zainstalowano”
+                                                 let ids = Set(AppInventory.enumerate(home: home).map(\.bundleID).filter { !$0.isEmpty })
+                                                 return ids.isEmpty ? nil : ids
+                                             },
+                                             appKnownToSystem: { AppInventory.launchServicesKnows($0) })      // audyt 2.2: aplikacja w dowolnym miejscu
         executor = ToolExecutor(registry: registry, policy: ApprovalPolicy(), mode: .assistant, audit: store)
         assistant = AssistantStore(executor: ToolExecutor(registry: registry, policy: ApprovalPolicy(), mode: .assistant, audit: store))
         diskMap = DiskMapStore(root: home, persistenceURL: dir.appendingPathComponent("diskmap-cache.lzfse"), home: home)   // F4: wynik mapy zapamiętany między uruchomieniami
@@ -429,7 +440,14 @@ final class AppModel: ObservableObject {
 
     private func push(_ a: inout [Double], _ v: Double) { a.append(v); if a.count > 90 { a.removeFirst(a.count - 90) } }
 
-    func refreshFindings() async { findings = await provider.findings() }
+    func refreshFindings() async {
+        findings = await provider.findings()
+        guard !ScreenshotDriver.isRequested else { return }                              // uruchomienia do zrzutów – bez powiadomień i bez sieci
+        await updates.checkIfDue()                                                        // audyt P3: „raz w tygodniu” także, gdy aplikacja działa tygodniami (tanie, gdy nie pora)
+        var newVersion: String?
+        if case .available(let r) = updates.state { newVersion = r.tag }
+        notifier.evaluate(freeBytes: freeSpace(), findings: findings, newVersion: newVersion)
+    }
 
     func evidence(_ id: String) -> Evidence? { evidenceByID[id] }
 
@@ -598,6 +616,7 @@ final class AppModel: ObservableObject {
         case "trash_selected": return String(localized: "Przeniesienie do Kosza")
         case "trash_cleanup_items": return String(localized: "Porządki – przeniesienie do Kosza")
         case "uninstall_app_to_trash": return String(localized: "Odinstalowanie aplikacji")
+        case "trash_app_leftovers": return String(localized: "Pozostałości po aplikacjach do Kosza")
         default: return tool
         }
     }
@@ -614,6 +633,13 @@ final class AppModel: ObservableObject {
     }
 
     /// F15: odinstalowanie przez Kosz – aplikacja (z odciskiem pakietu z chwili wyboru) i dane wybrane przez użytkownika. Narzędzie sprawdza wszystko ponownie.
+    /// F20: zaznaczone pozostałości po odinstalowanych aplikacjach – z odciskami z chwili wyboru (zmiana przed wykonaniem ⇒ odmowa dla elementu).
+    func proposeLeftovers(paths: [String]) async {
+        let pairs = paths.compactMap { p in FileFingerprint(path: p).map { (p, $0.encoded) } }
+        guard !pairs.isEmpty else { return }
+        await propose(ToolCall(name: "trash_app_leftovers", arguments: ["items": .array(pairs.map { .string($0.0) }), "fingerprints": .array(pairs.map { .string($0.1) })]))
+    }
+
     func proposeUninstall(appPath: String, items: [String]) async {
         guard let fp = FileFingerprint(path: appPath)?.encoded else { return }
         await propose(ToolCall(name: "uninstall_app_to_trash", arguments: ["app_path": .string(appPath), "app_fingerprint": .string(fp), "items": .array(items.map { .string($0) })]))
@@ -626,6 +652,7 @@ final class AppModel: ObservableObject {
         guard let p = pending, !operationRunning else { return }
         operationRunning = true
         let before = freeSpace()
+        let measuredBefore = Self.measuredTools.contains(p.call.name) ? await measurementSet() : nil      // F22: pomiar przed (tylko operacje przez Kosz)
         let outcome = await executor.approve(p.id, confirmedCategories: confirmed)
         pending = nil
         sheet = nil
@@ -649,6 +676,9 @@ final class AppModel: ObservableObject {
                 report.trashedPaths = moved.compactMap { $0["trash_path"]?.stringValue }.filter { !$0.isEmpty }
             }
             lastReport = report
+            if let b = measuredBefore, !(r.data["moved"]?.arrayValue ?? []).isEmpty {          // audyt P3: pomiar tylko, gdy coś faktycznie przeniesiono
+                history.recordBenchmark(BenchmarkAnalyzer.compare(operation: p.preview.title, before: b, after: await measurementSet(), decisive: Self.trashDecisive), at: Date())
+            }
         case .rejected(let m): lastReport = OperationReport(title: p.preview.title, success: false, message: String(localized: "Odrzucono: \(m)"), tool: tool)
         case .failed(let m): lastReport = OperationReport(title: p.preview.title, success: false, message: String(localized: "Błąd: \(m)"), tool: tool)
         case .needsApproval, .previewOnly: break
@@ -659,7 +689,7 @@ final class AppModel: ObservableObject {
             if tool == "trash_cleanup_items" { selection.removeAll() }
             await scanCleanup()
         }
-        if tool == "uninstall_app_to_trash" { await apps.load(force: true) }
+        if tool == "uninstall_app_to_trash" || tool == "trash_app_leftovers" { await apps.load(force: true) }
     }
 
     func decline() async {
@@ -694,6 +724,43 @@ final class AppModel: ObservableObject {
         operations = history.operations(limit: 200)
         quarantineEntries = quarantine.entries.sorted { $0.quarantinedAt > $1.quarantinedAt }
         measuredReclaimedTotal = history.totalReclaimedMeasured()
+        benchmarks = history.benchmarks(limit: 30)
+        historyProblem = Self.historyProblem(failures: history.failureCount, lastError: history.lastError, manifestError: quarantine.lastManifestError)
+    }
+
+    // MARK: Pomiary przed/po (F22)
+    /// Operacje, przed i po których mierzymy: przeniesienia do Kosza (miejsce wraca dopiero po opróżnieniu Kosza – stąd „Zmierz ponownie”).
+    /// Przeniesienie do Kosza realnie zmienia tylko wolne miejsce (po opróżnieniu Kosza); szybkość procesora i plików to tło – nie wpływa na ocenę.
+    static let trashDecisive: Set<BenchmarkMetric> = [.diskFreeBytes]
+    static let measuredTools: Set<String> = ["trash_selected", "trash_cleanup_items", "uninstall_app_to_trash", "trash_app_leftovers", "empty_trash"]
+
+    /// Wolne miejsce, pamięć i dwa mikropomiary po 3 próbki: stałe zadanie CPU i 200 małych plików we WŁASNYM katalogu danych aplikacji (`bench`).
+    func measurementSet() async -> MeasurementSet {
+        let free = freeSpace(), s = snapshot
+        let dir = dataDir.appendingPathComponent("bench", isDirectory: true)
+        let (cpu, files) = await Task.detached(priority: .utility) {
+            ((0..<3).map { _ in MicroBenchmark.cpuWorkMs() }, (0..<3).map { _ in MicroBenchmark.smallFileOpsMs(in: dir) })
+        }.value
+        var samples: [BenchmarkMetric: [Double]] = [.cpuWorkMs: cpu, .smallFileOpsMs: files]
+        if let free { samples[.diskFreeBytes] = [Double(free)] }
+        if let m = s?.memory { samples[.memoryUsedBytes] = [Double(m.used)]; samples[.swapUsedBytes] = [Double(m.swapUsed)] }
+        return MeasurementSet(takenAt: Date(), samples: samples, onAC: s?.battery?.onAC, thermal: s?.thermal, backgroundCPUPercent: s?.cpu?.totalPercent)
+    }
+
+    /// Nowy pomiar „po” dla zapisanego porównania (np. po opróżnieniu Kosza w Finderze) – ten sam pomiar „przed”, ten sam identyfikator.
+    func remeasure(_ id: String) async {
+        guard let old = benchmarks.first(where: { $0.id == id }) else { return }
+        var c = BenchmarkAnalyzer.compare(operation: old.operation, before: old.before, after: await measurementSet(), decisive: old.decisiveMetrics.map(Set.init))
+        c.id = old.id
+        history.recordBenchmark(c, at: Date())
+        reloadHistory()
+    }
+
+    static func historyProblem(failures: Int, lastError: String?, manifestError: String?) -> String? {
+        var parts: [String] = []
+        if failures > 0 { parts.append(String(localized: "Część historii nie została zapisana lub odczytana (błędów: \(failures)). Ostatni: \(lastError ?? "—")")) }
+        if let m = manifestError { parts.append(String(localized: "Nie udało się zapisać spisu kwarantanny – elementy są bezpieczne (opis leży obok każdego), ale spis może być nieaktualny: \(m)")) }
+        return parts.isEmpty ? nil : parts.joined(separator: "\n")
     }
 
     func proposeRestore(ids: [String]) async {

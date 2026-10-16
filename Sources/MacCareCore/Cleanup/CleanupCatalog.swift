@@ -95,8 +95,8 @@ public enum CleanupCatalog {
                     paths: ["~/Library/Logs"], match: .children, excludeNames: ["DiagnosticReports", "MacCareAI"], minAgeDays: 14, risk: .low, recreatable: true),
         CleanupRule(id: "crash.reports.old", category: .logs, title: String(localized: "Stare raporty awarii"), explanation: String(localized: "Raporty starsze niż 60 dni – nowsze zostają do diagnostyki."), owner: "macOS",
                     paths: ["~/Library/Logs/DiagnosticReports"], match: .children, minAgeDays: 60, risk: .low, recreatable: true),
-        CleanupRule(id: "user.tmp", category: .temporary, title: String(localized: "Pliki tymczasowe użytkownika"), explanation: String(localized: "Elementy w katalogu tymczasowym nieużywane od 3 dni."), owner: "różne",
-                    paths: ["$TMPDIR"], match: .children, excludeNames: ["com.apple", "TemporaryItems", "MacCareAI"], minAgeDays: 3, risk: .low, recreatable: true),
+        CleanupRule(id: "user.tmp", category: .temporary, title: String(localized: "Pliki tymczasowe użytkownika"), explanation: String(localized: "Elementy w katalogu tymczasowym nieużywane od 3 dni. Długo działające programy mogą tu trzymać blokady i gniazda – dlatego nie są zaznaczane same."), owner: "różne",
+                    paths: ["$TMPDIR"], match: .children, excludeNames: ["com.apple", "TemporaryItems", "MacCareAI"], minAgeDays: 3, risk: .medium, recreatable: true),   // P2-3
         // Programistyczne
         CleanupRule(id: "xcode.deriveddata", category: .devTools, title: String(localized: "Xcode – DerivedData"), explanation: String(localized: "Wyniki kompilacji i indeksy. Xcode odbuduje je przy następnym buildzie."), owner: "Xcode",
                     ownerBundleIDs: ["com.apple.dt.Xcode"], paths: ["~/Library/Developer/Xcode/DerivedData"], match: .children, risk: .low, recreatable: true, regenerationNote: String(localized: "Pierwszy build potrwa dłużej.")),
@@ -127,6 +127,9 @@ public enum CleanupCatalog {
         CleanupRule(id: "swiftpm.cache", category: .devTools, title: String(localized: "SwiftPM – pamięć podręczna"), explanation: String(localized: "Klony repozytoriów zależności."), owner: "Swift Package Manager",
                     paths: ["~/Library/Caches/org.swift.swiftpm"], risk: .low, recreatable: true),
         CleanupRule(id: "jetbrains.cache", category: .devTools, title: String(localized: "JetBrains – pamięć podręczna IDE"), explanation: String(localized: "Indeksy IDE. Odbudują się przy otwarciu projektu."), owner: "JetBrains",
+                    ownerBundleIDs: ["com.jetbrains.intellij", "com.jetbrains.intellij.ce", "com.jetbrains.pycharm", "com.jetbrains.pycharm.ce", "com.jetbrains.WebStorm",
+                                     "com.jetbrains.goland", "com.jetbrains.CLion", "com.jetbrains.PhpStorm", "com.jetbrains.rider", "com.jetbrains.rubymine",
+                                     "com.jetbrains.datagrip", "com.jetbrains.rustrover", "com.jetbrains.fleet", "com.jetbrains.toolbox"],
                     paths: ["~/Library/Caches/JetBrains"], match: .children, risk: .low, recreatable: true),
         CleanupRule(id: "playwright.browsers", category: .devTools, title: String(localized: "Playwright – pobrane przeglądarki"), explanation: String(localized: "Przeglądarki testowe. `npx playwright install` pobierze je ponownie."), owner: "Playwright",
                     paths: ["~/Library/Caches/ms-playwright"], match: .children, risk: .medium, recreatable: true),
@@ -146,9 +149,9 @@ public enum CleanupCatalog {
         // Świadomie POMINIĘTE: ~/Library/HTTPStorages (ciasteczka sesji = dane logowania) i obrazy dysków maszyn Docker/OrbStack (usunięcie kasuje
         // wszystkie kontenery, obrazy i wolumeny – rozmiar widać na mapie dysku; porządkuje się je narzędziem `docker system prune`).
         CleanupRule(id: "ollama.logs", category: .logs, title: String(localized: "Ollama – stare logi"), explanation: String(localized: "Logi serwera Ollama starsze niż 7 dni. Modele zostają."), owner: "Ollama",
-                    paths: ["~/.ollama/logs"], match: .children, minAgeDays: 7, risk: .low, recreatable: true),
+                    ownerBundleIDs: ["com.electron.ollama"], paths: ["~/.ollama/logs"], match: .children, minAgeDays: 7, risk: .low, recreatable: true),
         CleanupRule(id: "lmstudio.logs", category: .logs, title: String(localized: "LM Studio – stare logi"), explanation: String(localized: "Logi serwera LM Studio starsze niż 7 dni. Modele zostają."), owner: "LM Studio",
-                    paths: ["~/.lmstudio/server-logs", "~/.cache/lm-studio/server-logs"], match: .children, minAgeDays: 7, risk: .low, recreatable: true),
+                    ownerBundleIDs: ["ai.elementlabs.lmstudio"], paths: ["~/.lmstudio/server-logs", "~/.cache/lm-studio/server-logs"], match: .children, minAgeDays: 7, risk: .low, recreatable: true),
         CleanupRule(id: "docker.logs", category: .logs, title: String(localized: "Docker Desktop – stare logi"), explanation: String(localized: "Logi Docker Desktop starsze niż 7 dni. Kontenery, obrazy i wolumeny nie są ruszane."), owner: "Docker",
                     ownerBundleIDs: ["com.docker.docker"], paths: ["~/Library/Containers/com.docker.docker/Data/log"], match: .children, minAgeDays: 7, risk: .low, recreatable: true),
         CleanupRule(id: "orbstack.logs", category: .logs, title: String(localized: "OrbStack – stare logi"), explanation: String(localized: "Logi OrbStack starsze niż 7 dni. Maszyny i kontenery nie są ruszane."), owner: "OrbStack",

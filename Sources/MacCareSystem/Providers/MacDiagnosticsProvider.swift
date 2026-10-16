@@ -186,12 +186,15 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
         await cleanupScan(categories: categories, recordInHistory: true)
     }
 
+    public func verificationScan() async -> CleanupScanResult { await cleanupScan(categories: nil, recordInHistory: false) }
+
     /// `recordInHistory: false` – wywołujący (np. Smart Scan) zapisuje własny wiersz skanu, z oceną zdrowia.
     /// `cancel`: przerwanie z interfejsu (P2-4) – wynik ma wtedy `cancelled == true` i nie jest zapisywany w historii jako pełny skan.
     public func cleanupScan(categories: Set<CleanupCategory>?, recordInHistory: Bool, cancel: CancelFlag? = nil) async -> CleanupScanResult {
         let running = await RunningApps.all()                                             // aplikacje z oknem + właściciele procesów pomocniczych i w tle
+        let tools = await Task.detached(priority: .utility) { RunningApps.runningToolTokens() }.value   // P2-3: pracujące narzędzia (npm, cargo, xcodebuild…)
         let scanner = CleanupScanner(home: settings.home, clones: clones, tempDir: settings.tempDir)
-        let result = await Task.detached(priority: .utility) { scanner.scan(runningBundleIDs: running, only: categories, isCancelled: { cancel?.isSet ?? false }) }.value
+        let result = await Task.detached(priority: .utility) { scanner.scan(runningBundleIDs: running, runningTools: tools, only: categories, isCancelled: { cancel?.isSet ?? false }) }.value
         if recordInHistory, !result.cancelled {
             history?.recordScan(kind: categories == nil ? "cleanup" : "cleanup.partial", at: result.finishedAt, findings: await findings(),
                                 reclaimable: result.safeReclaimable, health: nil)

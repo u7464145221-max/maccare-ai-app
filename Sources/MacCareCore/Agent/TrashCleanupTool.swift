@@ -26,7 +26,7 @@ public struct TrashCleanupTool: AgentTool {
     var policy: PathPolicy { PathPolicy(home: home, ruleRoots: CleanupCatalog.allowedRoots(home: home, tempDir: tempDir)) }
 
     func resolve(_ a: ToolArguments) async -> (ok: [CleanupCandidate], rejected: [String]) {
-        let scan = await provider.cleanupScan(categories: nil)
+        let scan = await provider.verificationScan()
         let byPath = Dictionary(scan.candidates.map { ($0.path, $0) }, uniquingKeysWith: { a, _ in a })
         let pol = policy
         var ok: [CleanupCandidate] = [], rej: [String] = []

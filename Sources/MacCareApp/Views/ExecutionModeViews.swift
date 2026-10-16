@@ -28,8 +28,8 @@ struct ExecutionModeSwitch: View {
             moduleFor: { $0 == .readOnly ? .protection : .performance },
             width: width, accessibilityName: String(localized: "Tryb wykonania"))
             .help(model.isReadOnlyMode
-                  ? String(localized: "Tylko odczyt: MacCare niczego nie zmienia w systemie. „Edycja” odblokowuje wyłącznie przenoszenie do Kosza (Moje pliki, Porządki, odinstalowanie).")
-                  : String(localized: "Edycja: działa tylko „Przenieś do Kosza” (Moje pliki, Porządki, odinstalowanie); wszystko inne czeka na zakończenie poprawek bezpieczeństwa kwarantanny."))
+                  ? String(localized: "Tylko odczyt: MacCare niczego nie zmienia w systemie. „Edycja” odblokowuje wyłącznie przenoszenie do Kosza (Moje pliki, Porządki, odinstalowanie i pozostałości po aplikacjach).")
+                  : String(localized: "Edycja: działa tylko „Przenieś do Kosza” (Moje pliki, Porządki, odinstalowanie i pozostałości po aplikacjach); wszystko inne czeka na zakończenie poprawek bezpieczeństwa kwarantanny."))
             .id(model.executionRevision)                       // wymusza odświeżenie po zmianie trybu z zewnątrz (np. automatyczny powrót po bezczynności)
     }
 }
@@ -133,7 +133,7 @@ struct EditModeSheet: View {
             Text("Domyślnie MacCare niczego nie zmienia. Edycja odblokowuje wyłącznie przenoszenie do Kosza.").font(Theme.Typo.body).foregroundStyle(Theme.Palette.textSecondary)
 
             point("checkmark.circle.fill", Theme.Palette.ok, String(localized: "Odblokowane: „Przenieś do Kosza”"),
-                  String(localized: "Pliki i foldery zaznaczone w „Moje pliki”, pozycje zaznaczone w Porządkach i odinstalowanie wybranej aplikacji – zawsze po Twoim potwierdzeniu. Trafiają do Kosza macOS, więc możesz je stamtąd przywrócić (Finder → Kosz → Odłóż). Nic nie jest kasowane na stałe."))
+                  String(localized: "Pliki i foldery zaznaczone w „Moje pliki”, pozycje zaznaczone w Porządkach, odinstalowanie wybranej aplikacji i zaznaczone pozostałości po aplikacjach – zawsze po Twoim potwierdzeniu. Trafiają do Kosza macOS, więc możesz je stamtąd przywrócić (Finder → Kosz → Odłóż). Nic nie jest kasowane na stałe."))
             point("lock.fill", Theme.Palette.textSecondary, String(localized: "Nadal zablokowane – dostępne po zakończeniu poprawek bezpieczeństwa kwarantanny"),
                   String(localized: "Czyszczenie przez kwarantannę, trwałe usuwanie, opróżnianie Kosza, wyłączanie agentów autostartu i polecenia administratora."))
             point("timer", Theme.Palette.info, String(localized: "Edycja wyłącza się sama"),

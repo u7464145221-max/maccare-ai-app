@@ -4,6 +4,10 @@ import ImageIO
 import Combine
 import MacCareCore
 
+#if DEBUG || MACCARE_SCREENSHOTS
+// P3-3 (AUD-ARCH-2): sterownik zrzutów jest tylko w buildzie debug i w buildzie do zrzutów (`build_app.sh --screenshots`).
+// Wydanie (`build_app.sh` bez flagi) dostaje pusty zamiennik na końcu pliku – bez kodu zapisującego pliki i bez `dlsym`.
+
 /// Tryb dokumentacyjny: `MacCareApp --screenshots <katalog> [--mode main|history]`.
 /// Aplikacja sama renderuje własne okno do PNG (`NSView.cacheDisplay`) – nie wymaga uprawnienia „Nagrywanie ekranu”.
 /// Tryb `history` wykonuje pełny przepływ czyszczenia **wyłącznie na syntetycznym katalogu domowym** (odmawia, gdy to prawdziwy $HOME).
@@ -38,6 +42,7 @@ enum ScreenshotDriver {
         else if mode == "w4" { await w4Scenario(model: model, dir: dir) }
         else if mode == "w5" { await w5Scenario(model: model, dir: dir) }
         else if mode == "w7" { await w7Scenario(model: model, dir: dir) }
+        else if mode == "w8" { await w8Scenario(model: model, dir: dir) }
         else { await mainScenario(model: model, dir: dir) }
         log("GOTOWE → \(dir.path)")
         exit(0)
@@ -433,6 +438,57 @@ enum ScreenshotDriver {
         CGImageDestinationFinalize(dest)
     }
 
+    /// W8 (F20–F22): pozostałości do Kosza (zaznaczenie, potwierdzenie, wynik), Historia → Pomiary, wybór danych przy odinstalowaniu, karta Powiadomień.
+    /// Tylko syntetyczny HOME i atrapa Kosza (`MACCARE_TRASH_DIR`).
+    private static func w8Scenario(model: AppModel, dir: URL) async {
+        guard model.home != NSHomeDirectory(), ProcessInfo.processInfo.environment["MACCARE_TRASH_DIR"] != nil else { log("ODMOWA: tryb w8 działa tylko na syntetycznym HOME z MACCARE_TRASH_DIR"); return }
+        let prefix = argValue("--prefix") ?? "w8"
+        guard let actual = await setWindowSize(1280, 800) else { log("W8: brak okna"); return }
+        let size = "\(actual.width)x\(actual.height)"
+        func both(_ name: String, sheet: Bool = false) async {
+            for (appearance, suffix) in [(NSAppearance.Name.darkAqua, "ciemny"), (.aqua, "jasny")] {
+                NSApp.appearance = NSAppearance(named: appearance)
+                try? await Task.sleep(nanoseconds: 700_000_000)
+                capture("\(prefix)-\(size)-\(name)-\(suffix)", dir, includeSheet: sheet)
+            }
+            NSApp.appearance = nil
+        }
+        func settle(_ s: Double = 1.2) async { try? await Task.sleep(nanoseconds: UInt64(s * 1_000_000_000)) }
+        func apps(_ what: String) { NotificationCenter.default.post(name: .init("MacCareScreenshotApps"), object: what) }
+        model.setViewMode(.pro)
+        model.requestEditMode(); model.confirmEditMode(); await settle()
+        model.apps.roots = [model.home + "/Applications"]
+        model.open(.apps); model.setPhase(.apps, .result)
+        await model.apps.load(force: true); await settle(1.5)
+        log("W8 aplikacje: \(model.apps.apps.map(\.name)), pozostałości: \(model.apps.leftovers?.map(\.bundleID) ?? [])")
+        apps("leftovers"); await settle()
+        await both("pozostalosci-zaznaczone")
+        let groups = (model.apps.leftovers ?? []).filter { $0.bundleID.hasPrefix("com.oldvendor") }
+        await model.proposeLeftovers(paths: groups.flatMap { $0.safeItems.map(\.path) })                 // jak w interfejsie: bez „danych aplikacji”; await settle(1.8)
+        log("W8 arkusz: \(model.sheet?.preview.title ?? "brak") | ostrzeżenia: \(model.sheet?.preview.warnings ?? [])")
+        await both("pozostalosci-potwierdzenie", sheet: true)
+        await model.approve(confirmed: []); await settle(2.5)
+        log("W8 wynik: \(model.lastReport?.message ?? "brak")")
+        apps("leftovers"); await settle()
+        await both("pozostalosci-wynik")
+        model.open(.history); model.historyTab = .measurements; model.reloadHistory(); await settle(1.5)
+        log("W8 pomiary: \(model.benchmarks.map { "\($0.operation): \($0.overall.rawValue)" })")
+        await both("historia-pomiary")
+        model.open(.apps); await settle()
+        if let a = model.apps.apps.first { apps(a.path); await settle(2) ; await both("odinstaluj-wybor", sheet: true); apps("none"); await settle() }
+        else { log("W8: brak syntetycznej aplikacji") }
+        model.open(.settings); await settle(1.5)
+        await both("ustawienia")
+        if let tall = await setWindowSize(1280, 1400) {                                    // karta Powiadomień jest niżej – wyższe okno zamiast przewijania
+            await settle(1.2); log("W8 wysokie okno: \(tall.width)x\(tall.height)")
+            for (appearance, suffix) in [(NSAppearance.Name.darkAqua, "ciemny"), (.aqua, "jasny")] {
+                NSApp.appearance = NSAppearance(named: appearance); try? await Task.sleep(nanoseconds: 700_000_000)
+                capture("\(prefix)-\(tall.width)x\(tall.height)-ustawienia-powiadomienia-\(suffix)", dir)
+            }
+        }
+        NSApp.appearance = nil
+    }
+
     private static func w5Scenario(model: AppModel, dir: URL) async {
         guard model.home != NSHomeDirectory(), ProcessInfo.processInfo.environment["MACCARE_TRASH_DIR"] != nil else { log("ODMOWA: tryb w5 działa tylko na syntetycznym HOME z MACCARE_TRASH_DIR"); return }
         let prefix = argValue("--prefix") ?? "w5"
@@ -489,6 +545,8 @@ enum ScreenshotDriver {
     /// W4: przełącznik Tylko odczyt ↔ Edycja – pasek u góry, arkusz potwierdzenia, Edycja z odliczaniem, podglądy z powodem blokady, Ustawienia,
     /// powrót po bezczynności (limit skrócony do 1 s tylko na potrzeby zrzutu). Tylko odczyt: w zakresie `.trashSelectedOnly` nie istnieje żadna operacja do wykonania.
     private static func w4Scenario(model: AppModel, dir: URL) async {
+        // audyt 16.10 (P3): scenariusz włącza Edycję i tworzy oczekującą operację – wyłącznie na syntetycznym HOME (jak w5/w7/w8)
+        guard model.home != NSHomeDirectory() else { log("ODMOWA: tryb w4 działa tylko na syntetycznym HOME"); return }
         let prefix = argValue("--prefix") ?? "w4"
         let (w, h) = (argValue("--sizes") ?? "1280x800").split(separator: ",").first.map { s -> (Int, Int) in
             let p = s.split(separator: "x").compactMap { Int($0) }; return p.count == 2 ? (p[0], p[1]) : (1280, 800) } ?? (1280, 800)
@@ -700,3 +758,12 @@ enum ScreenshotDriver {
 
     private static func log(_ s: String) { FileHandle.standardError.write(Data(("SCREENSHOT " + s + "\n").utf8)) }
 }
+
+#else
+/// Wydanie: brak trybu zrzutów (P3-3).
+@MainActor
+enum ScreenshotDriver {
+    static var isRequested: Bool { false }
+    static func runIfRequested(model: AppModel) async {}
+}
+#endif

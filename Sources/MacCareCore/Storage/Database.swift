@@ -8,7 +8,11 @@ private let SQLITE_TRANSIENT_PTR = unsafeBitCast(-1, to: sqlite3_destructor_type
 /// Minimalna, bezpieczna nakładka na SQLite (parametryzowane zapytania, WAL, synchronizacja przez kolejkę).
 public final class SQLiteDatabase: @unchecked Sendable {
     private var db: OpaquePointer?
-    private let queue = DispatchQueue(label: "maccare.sqlite")
+    /// Jedno połączenie dzielone przez wiele wątków: blokada REKURENCYJNA, żeby transakcja (BEGIN…COMMIT) trzymała ją przez całe ciało,
+    /// a zapisy wewnątrz ciała (ten sam wątek) mogły ją ponownie wziąć. Audyt 16.10 (2.4): wcześniej każde polecenie brało blokadę osobno,
+    /// więc obcy zapis mógł wpaść w środek cudzej transakcji (albo drugi BEGIN kończył się błędem i zapis przepadał).
+    private let lock = NSRecursiveLock()
+    private func locked<T>(_ body: () throws -> T) rethrows -> T { lock.lock(); defer { lock.unlock() }; return try body() }
 
     public enum Value: Sendable, Equatable { case null, int(Int64), double(Double), text(String) }
 
@@ -22,7 +26,7 @@ public final class SQLiteDatabase: @unchecked Sendable {
     deinit { sqlite3_close(db) }
 
     public func exec(_ sql: String) throws {
-        try queue.sync {
+        try locked {
             var err: UnsafeMutablePointer<CChar>?
             if sqlite3_exec(db, sql, nil, nil, &err) != SQLITE_OK {
                 let m = err.map { String(cString: $0) } ?? "?"; sqlite3_free(err); throw DatabaseError(message: m)
@@ -32,7 +36,7 @@ public final class SQLiteDatabase: @unchecked Sendable {
 
     @discardableResult
     public func run(_ sql: String, _ params: [Value] = []) throws -> Int64 {
-        try queue.sync {
+        try locked {
             let st = try prepare(sql, params); defer { sqlite3_finalize(st) }
             let rc = sqlite3_step(st)
             guard rc == SQLITE_DONE || rc == SQLITE_ROW else { throw DatabaseError(message: String(cString: sqlite3_errmsg(db))) }
@@ -41,7 +45,7 @@ public final class SQLiteDatabase: @unchecked Sendable {
     }
 
     public func query(_ sql: String, _ params: [Value] = []) throws -> [[String: Value]] {
-        try queue.sync {
+        try locked {
             let st = try prepare(sql, params); defer { sqlite3_finalize(st) }
             var rows: [[String: Value]] = []
             while true {
@@ -65,8 +69,9 @@ public final class SQLiteDatabase: @unchecked Sendable {
     }
 
     public func transaction(_ body: () throws -> Void) throws {
+        lock.lock(); defer { lock.unlock() }                                                // cała transakcja pod jedną blokadą (inne wątki czekają)
         try exec("BEGIN IMMEDIATE")
-        do { try body(); try exec("COMMIT") } catch { try? exec("ROLLBACK"); throw error }
+        do { try body(); try exec("COMMIT") } catch { try? exec("ROLLBACK"); throw error }   // try? świadomie: pierwotny błąd jest zgłaszany; nieudany ROLLBACK SQLite i tak wycofuje przy kolejnym BEGIN
     }
 
     private func prepare(_ sql: String, _ params: [Value]) throws -> OpaquePointer? {
@@ -95,6 +100,10 @@ extension SQLiteDatabase.Value {
 public final class HistoryStore: AuditSink, @unchecked Sendable {
     public let db: SQLiteDatabase
     public static let schemaVersion = 1
+    /// Migracje schematu: klucz n = przejście z wersji n do n+1 (dziś brak – schemat 1). Nowa kolumna = nowy wpis i `schemaVersion` + 1.
+    static let migrations: [Int: (SQLiteDatabase) throws -> Void] = [:]
+    /// Wersja schematu zastana w pliku przy otwarciu (nil = nowa baza).
+    public private(set) var storedSchemaVersion: Int?
 
     /// Katalog domowy zastępowany „~” w zapisach dziennika operacji (P3-6 / AUD-PRIV-1): w bazie nie ma nazwy konta. nil = bez redakcji.
     public let redactedHome: String?
@@ -109,6 +118,24 @@ public final class HistoryStore: AuditSink, @unchecked Sendable {
     func redact(_ s: String) -> String {
         guard let h = redactedHome else { return s }
         return s.replacingOccurrences(of: h, with: "~").replacingOccurrences(of: h.replacingOccurrences(of: "/", with: "\\/"), with: "~")
+    }
+
+    // MARK: Błędy bazy (P2-17 / AUD-ARCH-5)
+    /// Zapis i odczyt historii nie przerywają pracy aplikacji, ale błąd NIE jest przemilczany: liczba nieudanych operacji i ostatni komunikat
+    /// są dostępne dla interfejsu (Historia pokazuje ostrzeżenie), a wynik odczytu po błędzie to „brak danych”, nie pusta historia bez słowa.
+    private let errorLock = NSLock()
+    private var _failures = 0
+    private var _lastError: String?
+    public var failureCount: Int { errorLock.lock(); defer { errorLock.unlock() }; return _failures }
+    public var lastError: String? { errorLock.lock(); defer { errorLock.unlock() }; return _lastError }
+
+    /// Wykonuje operację na bazie; błąd jest liczony i zapamiętywany (z opisem, czego dotyczył), wynik = `fallback`.
+    @discardableResult
+    func attempt<T>(_ what: String, _ fallback: T, _ body: () throws -> T) -> T {
+        do { return try body() } catch {
+            errorLock.lock(); _failures += 1; _lastError = "\(what): \(error)"; errorLock.unlock()
+            return fallback
+        }
     }
 
     private func migrate() throws {
@@ -126,18 +153,30 @@ public final class HistoryStore: AuditSink, @unchecked Sendable {
         CREATE TABLE IF NOT EXISTS benchmarks(id TEXT PRIMARY KEY, at REAL NOT NULL, operation TEXT, verdict TEXT, payload TEXT);
         CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT);
         """)
+        // Audyt 16.10 (3.8): wersja schematu jest CZYTANA. Starsza baza przechodzi kolejne migracje (`migrations[n]` = przejście n → n+1, w transakcji);
+        // baza z nowszej wersji aplikacji nie jest „cofana” – zostaje bez zmian, a problem trafia do licznika błędów (widoczny w Historii).
+        let stored = (try db.query("SELECT value FROM meta WHERE key = 'schema'")).first?["value"]?.string.flatMap { Int($0) }
+        storedSchemaVersion = stored
+        if let v = stored, v > Self.schemaVersion {
+            attempt("schemat bazy", ()) { throw DatabaseError(message: String(localized: "baza zapisana przez nowszą wersję MacCare (schemat \(v) > \(Self.schemaVersion)) – nie jest zmieniana")) }
+            return
+        }
+        for from in (stored ?? Self.schemaVersion)..<Self.schemaVersion {
+            guard let step = Self.migrations[from] else { throw DatabaseError(message: "brak migracji schematu \(from) → \(from + 1)") }
+            try db.transaction { try step(db) }
+        }
         try db.run("INSERT OR REPLACE INTO meta(key, value) VALUES('schema', ?)", [.text(String(Self.schemaVersion))])
     }
 
     // MARK: Audyt
     public func record(_ r: AuditRecord) {
-        _ = try? db.run("INSERT OR REPLACE INTO operations(id, call_id, at, tool, origin, mode, outcome, args, message) VALUES(?,?,?,?,?,?,?,?,?)",
+        attempt("dziennik operacji", ()) { try db.run("INSERT OR REPLACE INTO operations(id, call_id, at, tool, origin, mode, outcome, args, message) VALUES(?,?,?,?,?,?,?,?,?)",
                         [.text(r.id), .text(r.callID), .double(r.at.timeIntervalSince1970), .text(r.tool), .text(r.origin.rawValue),
-                         .text(r.mode.rawValue), .text(r.outcome.rawValue), .text(redact(r.argumentsJSON)), .text(redact(r.message))])
+                         .text(r.mode.rawValue), .text(r.outcome.rawValue), .text(redact(r.argumentsJSON)), .text(redact(r.message))]) }
     }
 
     public func operations(limit: Int = 200) -> [AuditRecord] {
-        ((try? db.query("SELECT * FROM operations ORDER BY at DESC LIMIT ?", [.int(Int64(limit))])) ?? []).compactMap { r in
+        attempt("odczyt dziennika operacji", []) { try db.query("SELECT * FROM operations ORDER BY at DESC LIMIT ?", [.int(Int64(limit))]) }.compactMap { r in
             guard let id = r["id"]?.string, let tool = r["tool"]?.string, let at = r["at"]?.double else { return nil }
             return AuditRecord(id: id, callID: r["call_id"]?.string ?? "", tool: tool, argumentsJSON: r["args"]?.string ?? "{}",
                                origin: CallOrigin(rawValue: r["origin"]?.string ?? "") ?? .user, mode: AgentMode(rawValue: r["mode"]?.string ?? "") ?? .assistant,
@@ -148,21 +187,21 @@ public final class HistoryStore: AuditSink, @unchecked Sendable {
 
     // MARK: Skany i ustalenia
     public func recordScan(kind: String, at: Date, findings: [Finding], reclaimable: UInt64, health: Int?) {
-        try? db.transaction {
+        attempt("zapis skanu", ()) { try db.transaction {
             try db.run("INSERT INTO scans(at, kind, findings, reclaimable, health, payload) VALUES(?,?,?,?,?,?)",
                        [.double(at.timeIntervalSince1970), .text(kind), .int(Int64(findings.count)), .int(Int64(reclaimable)),
-                        health.map { .int(Int64($0)) } ?? .null, .text(String(decoding: (try? JSONEncoder.iso.encode(findings)) ?? Data(), as: UTF8.self))])
+                        health.map { .int(Int64($0)) } ?? .null, .text(redact(String(decoding: try JSONEncoder.iso.encode(findings), as: UTF8.self)))])   // audyt 3.2: „~” zamiast konta
             for f in findings {
                 try db.run("INSERT INTO findings_log(at, finding_id, severity, certainty, title) VALUES(?,?,?,?,?)",
-                           [.double(at.timeIntervalSince1970), .text(f.id), .int(Int64(f.severity.rawValue)), .text(f.certainty.rawValue), .text(f.title)])
+                           [.double(at.timeIntervalSince1970), .text(f.id), .int(Int64(f.severity.rawValue)), .text(f.certainty.rawValue), .text(redact(f.title))])
             }
-        }
+        } }
     }
 
     public struct ScanRow: Sendable, Identifiable { public var id: Int64; public var at: Date; public var kind: String; public var findings: Int; public var reclaimable: UInt64; public var health: Int? }
     public func scans(since: Date? = nil, limit: Int = 500) -> [ScanRow] {
-        ((try? db.query("SELECT id, at, kind, findings, reclaimable, health FROM scans WHERE at >= ? ORDER BY at DESC LIMIT ?",
-                        [.double((since ?? .distantPast).timeIntervalSince1970), .int(Int64(limit))])) ?? []).compactMap { r in
+        attempt("odczyt skanów", []) { try db.query("SELECT id, at, kind, findings, reclaimable, health FROM scans WHERE at >= ? ORDER BY at DESC LIMIT ?",
+                        [.double((since ?? .distantPast).timeIntervalSince1970), .int(Int64(limit))]) }.compactMap { r in
             guard let id = r["id"]?.int, let at = r["at"]?.double else { return nil }
             return ScanRow(id: id, at: Date(timeIntervalSince1970: at), kind: r["kind"]?.string ?? "", findings: Int(r["findings"]?.int ?? 0),
                            reclaimable: UInt64(max(0, r["reclaimable"]?.int ?? 0)), health: r["health"]?.int.map { Int($0) })
@@ -171,49 +210,49 @@ public final class HistoryStore: AuditSink, @unchecked Sendable {
 
     // MARK: Odzyskane miejsce (zmierzone, nie deklarowane)
     public func recordReclaimed(operation: String, estimated: UInt64, measured: Int64?, note: String, at: Date) {
-        _ = try? db.run("INSERT INTO reclaimed(at, operation, estimated, measured, note) VALUES(?,?,?,?,?)",
-                        [.double(at.timeIntervalSince1970), .text(operation), .int(Int64(estimated)), measured.map { .int($0) } ?? .null, .text(note)])
+        attempt("zapis odzyskanego miejsca", ()) { try db.run("INSERT INTO reclaimed(at, operation, estimated, measured, note) VALUES(?,?,?,?,?)",
+                        [.double(at.timeIntervalSince1970), .text(operation), .int(Int64(estimated)), measured.map { .int($0) } ?? .null, .text(redact(note))]) }
     }
     public func totalReclaimedMeasured(since: Date = .distantPast) -> Int64 {
-        (try? db.query("SELECT COALESCE(SUM(measured),0) AS s FROM reclaimed WHERE at >= ? AND measured > 0", [.double(since.timeIntervalSince1970)]))?.first?["s"]?.int ?? 0
+        attempt("odczyt odzyskanego miejsca", []) { try db.query("SELECT COALESCE(SUM(measured),0) AS s FROM reclaimed WHERE at >= ? AND measured > 0", [.double(since.timeIntervalSince1970)]) }.first?["s"]?.int ?? 0
     }
 
     // MARK: Szeregi czasowe
     public func recordSamples(_ values: [String: Double], at: Date) {
-        try? db.transaction { for (k, v) in values { try db.run("INSERT INTO samples(at, metric, value) VALUES(?,?,?)", [.double(at.timeIntervalSince1970), .text(k), .double(v)]) } }
+        attempt("zapis próbek", ()) { try db.transaction { for (k, v) in values { try db.run("INSERT INTO samples(at, metric, value) VALUES(?,?,?)", [.double(at.timeIntervalSince1970), .text(k), .double(v)]) } } }
     }
     public func series(_ metric: String, since: Date) -> [(Date, Double)] {
-        ((try? db.query("SELECT at, value FROM samples WHERE metric = ? AND at >= ? ORDER BY at", [.text(metric), .double(since.timeIntervalSince1970)])) ?? [])
+        attempt("odczyt próbek", []) { try db.query("SELECT at, value FROM samples WHERE metric = ? AND at >= ? ORDER BY at", [.text(metric), .double(since.timeIntervalSince1970)]) }
             .compactMap { r in guard let a = r["at"]?.double, let v = r["value"]?.double else { return nil }; return (Date(timeIntervalSince1970: a), v) }
     }
     /// Retencja: próbki starsze niż N dni są agregowane (średnia godzinowa) – kontrola rozmiaru bazy.
     public func compactSamples(olderThan days: Double = 7, now: Date = Date()) {
         let cutoff = now.timeIntervalSince1970 - days * 86400
-        try? db.transaction {
+        attempt("zagęszczanie próbek", ()) { try db.transaction {
             try db.run("""
             INSERT INTO samples(at, metric, value)
             SELECT CAST(at/3600 AS INTEGER)*3600 + 1800 AS hour, metric, AVG(value) FROM samples
             WHERE at < ? AND (at - CAST(at/3600 AS INTEGER)*3600) <> 1800 GROUP BY hour, metric
             """, [.double(cutoff)])
             try db.run("DELETE FROM samples WHERE at < ? AND (at - CAST(at/3600 AS INTEGER)*3600) <> 1800", [.double(cutoff)])
-        }
+        } }
     }
 
     // MARK: Porównania przed/po
     public func recordBenchmark(_ c: BenchmarkComparison, at: Date) {
-        _ = try? db.run("INSERT OR REPLACE INTO benchmarks(id, at, operation, verdict, payload) VALUES(?,?,?,?,?)",
+        attempt("zapis porównania", ()) { try db.run("INSERT OR REPLACE INTO benchmarks(id, at, operation, verdict, payload) VALUES(?,?,?,?,?)",
                         [.text(c.id), .double(at.timeIntervalSince1970), .text(c.operation), .text(c.overall.rawValue),
-                         .text(String(decoding: (try? JSONEncoder.iso.encode(c)) ?? Data(), as: UTF8.self))])
+                         .text(redact(String(decoding: try JSONEncoder.iso.encode(c), as: UTF8.self)))]) }
     }
     public func benchmarks(limit: Int = 20) -> [BenchmarkComparison] {
-        ((try? db.query("SELECT payload FROM benchmarks ORDER BY at DESC LIMIT ?", [.int(Int64(limit))])) ?? [])
-            .compactMap { $0["payload"]?.string.flatMap { try? JSONDecoder.iso.decode(BenchmarkComparison.self, from: Data($0.utf8)) } }
+        attempt("odczyt porównań", []) { try db.query("SELECT payload FROM benchmarks ORDER BY at DESC LIMIT ?", [.int(Int64(limit))]) }
+            .compactMap { $0["payload"]?.string.flatMap { try? JSONDecoder.iso.decode(BenchmarkComparison.self, from: Data($0.utf8)) } }   // try? świadomie: wiersz w nieznanym formacie (starsza wersja) jest pomijany
     }
 
     // MARK: Ustawienia
-    public func setting(_ key: String) -> String? { (try? db.query("SELECT value FROM settings WHERE key = ?", [.text(key)]))?.first?["value"]?.string }
+    public func setting(_ key: String) -> String? { attempt("odczyt ustawienia", []) { try db.query("SELECT value FROM settings WHERE key = ?", [.text(key)]) }.first?["value"]?.string }
     public func setSetting(_ key: String, _ value: String?) {
-        if let value { _ = try? db.run("INSERT OR REPLACE INTO settings(key, value) VALUES(?,?)", [.text(key), .text(value)]) }
-        else { _ = try? db.run("DELETE FROM settings WHERE key = ?", [.text(key)]) }
+        if let value { attempt("zapis ustawienia", ()) { try db.run("INSERT OR REPLACE INTO settings(key, value) VALUES(?,?)", [.text(key), .text(value)]) } }
+        else { attempt("zapis ustawienia", ()) { try db.run("DELETE FROM settings WHERE key = ?", [.text(key)]) } }
     }
 }

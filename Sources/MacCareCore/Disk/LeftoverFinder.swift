@@ -10,6 +10,8 @@ public struct AppLeftover: Sendable, Identifiable, Hashable {
     public var location: String
     public var size: UInt64
     public var modified: Date
+    /// Application Support lub kontener – mogą zawierać dokumenty i ustawienia (audyt 2.2: nie zaznaczane razem z resztą).
+    public var risky: Bool = false
 }
 
 /// Wyszukiwanie pozostałości (P2-12, część: tylko odczyt). Heurystyka – dlatego wynik to „możliwe pozostałości”: nazwa w odwrotnej notacji DNS,
@@ -17,8 +19,8 @@ public struct AppLeftover: Sendable, Identifiable, Hashable {
 public enum LeftoverFinder {
     /// Miejsca w `~/Library` przeglądane płytko (tylko pierwszy poziom).
     public static let locations: [(rel: String, label: String)] = [
-        ("Library/Application Support", "Application Support"), ("Library/Caches", String(localized: "Pamięć podręczna")), ("Library/Preferences", "Preferencje"),
-        ("Library/Containers", "Kontenery"), ("Library/Saved Application State", "Stan okien")]
+        ("Library/Application Support", "Application Support"), ("Library/Caches", String(localized: "Pamięć podręczna")), ("Library/Preferences", String(localized: "Preferencje")),
+        ("Library/Containers", String(localized: "Kontenery")), ("Library/Saved Application State", String(localized: "Stan okien"))]
     // Pominięte celowo: HTTPStorages/WebKit/Logs – tworzy je każdy proces korzystający z sieci (także narzędzia bez aplikacji), więc dawały głównie fałszywe trafienia
     // (pomiar 14.10.2026 na tym Macu: 111 kandydatów, w tym 28 HTTPStorages).
 
@@ -75,7 +77,8 @@ public enum LeftoverFinder {
                 let p = dir + "/" + name
                 guard let st = FileStat.of(p), !st.isSymlink else { continue }
                 let size = measure ? DiskUsage.measure(p).allocated : st.allocatedSize
-                out.append(AppLeftover(path: p, bundleID: id, location: label, size: size, modified: st.modified))
+                out.append(AppLeftover(path: p, bundleID: id, location: label, size: size, modified: st.modified,
+                                       risky: rel.hasSuffix("Application Support") || rel.hasSuffix("Containers")))
             }
         }
         return out.sorted { $0.size > $1.size }
@@ -90,4 +93,6 @@ public struct AppLeftoverGroup: Sendable, Identifiable, Hashable {
     public var size: UInt64 { items.reduce(0) { $0 + $1.size } }
     public var locations: String { items.map(\.location).joined(separator: ", ") }
     public var lastModified: Date { items.map(\.modified).max() ?? .distantPast }
+    public var safeItems: [AppLeftover] { items.filter { !$0.risky } }
+    public var riskyItems: [AppLeftover] { items.filter(\.risky) }
 }

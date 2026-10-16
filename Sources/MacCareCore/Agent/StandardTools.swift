@@ -8,6 +8,13 @@ public protocol DiagnosticsProvider: Sendable {
     func largeFiles(minBytes: UInt64, olderThanDays: Int?, limit: Int) async -> [FileEntry]
     func crashSummary(process: String) async -> String?
     func benchmarkComparisons(limit: Int) async -> [BenchmarkComparison]
+    /// Świeży skan Porządków do weryfikacji przed operacją (podgląd, wykonanie) – NIE zapisywany w Historii jako skan użytkownika
+    /// (audyt 16.10, 3.8: jedna operacja dawała wcześniej trzy wpisy skanu).
+    func verificationScan() async -> CleanupScanResult
+}
+
+public extension DiagnosticsProvider {
+    func verificationScan() async -> CleanupScanResult { await cleanupScan(categories: nil) }
 }
 
 /// Operacje systemowe wymagające API macOS. Każda implementacja MUSI sama weryfikować cel (np. nazwę procesu).
@@ -133,8 +140,8 @@ public struct BenchmarkTool: AgentTool {
 public struct DNSDiagnosticsTool: AgentTool {
     let actions: SystemActions
     public init(_ a: SystemActions) { actions = a }
-    public var spec: ToolSpec { ToolSpec(name: "diagnose_dns", description: String(localized: "Konfiguracja DNS i czas rozwiązania kilku domen testowych."), kind: .read, risk: .none,
-                                         permissions: [.network], limits: String(localized: "Nie zmienia ustawień."), reversible: true) }
+    public var spec: ToolSpec { ToolSpec(name: "diagnose_dns", description: String(localized: "Konfiguracja DNS tego Maca (serwery, domeny wyszukiwania) – bez wysyłania zapytań."), kind: .read, risk: .none,
+                                         permissions: [.none], limits: String(localized: "Nie zmienia ustawień."), reversible: true) }
     public func run(_ a: ToolArguments) async throws -> ToolResult { ToolResult(summary: await actions.dnsDiagnostics()) }
 }
 
@@ -170,7 +177,7 @@ public struct QuarantineCleanupTool: AgentTool {
         kind: .action, risk: .low, permissions: [.none], limits: String(localized: "Tylko elementy z bieżącego skanu; pomija działające aplikacje; nigdy trwałe usuwanie."), reversible: true) }
 
     func resolve(_ a: ToolArguments) async -> (ok: [CleanupCandidate], rejected: [String]) {
-        let scan = await provider.cleanupScan(categories: nil)
+        let scan = await provider.verificationScan()
         let byPath = Dictionary(scan.candidates.map { ($0.path, $0) }, uniquingKeysWith: { a, _ in a })
         let policy = PathPolicy(home: home, ruleRoots: CleanupCatalog.allowedRoots(home: home, tempDir: tempDir))
         var ok: [CleanupCandidate] = [], rej: [String] = []
@@ -229,7 +236,7 @@ public struct EmptyTrashTool: AgentTool {
     var trashPath: String { PathTools.canonical("~/.Trash", home: home) }
     public func preview(_ a: ToolArguments) async throws -> OperationPreview {
         // P1-2 (AUD-DEL-4): nieczytelny Kosz to NIE „pusty Kosz” – mówimy wprost, że nie mamy dostępu
-        guard let items = try? FileManager.default.contentsOfDirectory(atPath: trashPath) else {
+        guard let items = try? FileManager.default.contentsOfDirectory(atPath: trashPath) else {   // try? świadomie: nieczytelny Kosz ⇒ jawny komunikat (P1-2), nie „0 B”
             return OperationPreview(title: String(localized: "Opróżnienie Kosza – brak dostępu do Kosza"), purpose: String(localized: "Trwałe zwolnienie miejsca"),
                                     expectedEffect: String(localized: "Nic nie zostanie usunięte: MacCare nie może odczytać zawartości Kosza (uprawnienia lub Pełny dostęp do dysku)."), risk: .high, reversible: false,
                                     undoDescription: "—", affectedItems: [], warnings: [String(localized: "Brak dostępu do Kosza – opróżnij go w Finderze albo nadaj MacCare Pełny dostęp do dysku.")])
@@ -242,7 +249,7 @@ public struct EmptyTrashTool: AgentTool {
     public func run(_ a: ToolArguments) async throws -> ToolResult {
         try ExecutionGuard.require(.emptyTrash)
         let policy = PathPolicy(home: home, ruleRoots: [trashPath])
-        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: trashPath) else {
+        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: trashPath) else {   // try? świadomie: nieczytelny Kosz ⇒ jawny komunikat (P1-2), nie „0 B”
             return ToolResult(summary: String(localized: "Nie opróżniono Kosza: brak dostępu do jego zawartości (uprawnienia lub Pełny dostęp do dysku). Nic nie usunięto."),
                               data: .object(["freed_bytes": .number(0), "unreadable": .bool(true)]), success: false)
         }
@@ -390,7 +397,9 @@ public enum StandardTools {
     /// `appDataDirs`: katalogi danych MacCare (historia, kwarantanna) – `trash_selected` nigdy ich nie rusza.
     public static func registry(provider: DiagnosticsProvider, actions: SystemActions, quarantine: QuarantineStore, trash: TrashService,
                                 home: String = PathTools.home, tempDir: String = NSTemporaryDirectory(), appDataDirs: [String] = [],
-                                runningApps: @escaping @Sendable () async -> Set<String>? = { nil }) -> ToolRegistry {
+                                runningApps: @escaping @Sendable () async -> Set<String>? = { nil },
+                                installedApps: @escaping @Sendable () async -> Set<String>? = { nil },
+                                appKnownToSystem: @escaping @Sendable (String) -> Bool = { _ in true }) -> ToolRegistry {   // domyślnie „znana” ⇒ odmowa
         ToolRegistry([
             SystemOverviewTool(provider), FindingsTool(provider), TopProcessesTool(provider), CleanupScanTool(provider), LargeFilesTool(provider),
             CrashSummaryTool(provider), BenchmarkTool(provider), DNSDiagnosticsTool(actions), OpenSettingsTool(actions),
@@ -398,7 +407,8 @@ public enum StandardTools {
             RestoreQuarantineTool(quarantine), PurgeQuarantineTool(quarantine), QuitAppTool(actions), DisableLaunchAgentTool(actions), ReindexSpotlightTool(actions), FlushDNSTool(actions),
             TrashSelectedTool(trash: trash, home: home, tempDir: tempDir, appDataRoots: appDataDirs),
             TrashCleanupTool(provider: provider, trash: trash, home: home, tempDir: tempDir),
-            UninstallAppTool(trash: trash, home: home, runningBundleIDs: runningApps)          // domyślnie stan nieznany ⇒ odmowa
+            UninstallAppTool(trash: trash, home: home, runningBundleIDs: runningApps),         // domyślnie stan nieznany ⇒ odmowa
+            LeftoversTrashTool(trash: trash, home: home, installedBundleIDs: installedApps, runningBundleIDs: runningApps, appKnownToSystem: appKnownToSystem)
         ])
     }
 }

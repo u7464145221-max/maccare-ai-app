@@ -288,7 +288,7 @@ struct SettingsView: View {
                         ExecutionModeSwitch(width: 260)
                         Text("Tylko odczyt – MacCare analizuje i pokazuje podgląd, niczego nie zmienia w systemie. Tak zaczyna się KAŻDE uruchomienie; wybór „Edycja” nie jest zapamiętywany.")
                             .font(Theme.Typo.body).foregroundStyle(Theme.Palette.textSecondary).fixedSize(horizontal: false, vertical: true)
-                        Text("Edycja – odblokowuje wyłącznie przenoszenie do Kosza: pliki zaznaczone w „Moje pliki”, pozycje zaznaczone w Porządkach i odinstalowanie wybranej aplikacji, zawsze po potwierdzeniu. Czyszczenie przez kwarantannę, trwałe usuwanie, opróżnianie Kosza, agenci autostartu i polecenia administratora czekają na poprawki bezpieczeństwa kwarantanny. Asystent AI nigdy nie przełącza trybu.")
+                        Text("Edycja – odblokowuje wyłącznie przenoszenie do Kosza: pliki zaznaczone w „Moje pliki”, pozycje zaznaczone w Porządkach, odinstalowanie wybranej aplikacji i zaznaczone pozostałości po aplikacjach, zawsze po potwierdzeniu. Czyszczenie przez kwarantannę, trwałe usuwanie, opróżnianie Kosza, agenci autostartu i polecenia administratora czekają na poprawki bezpieczeństwa kwarantanny. Asystent AI nigdy nie przełącza trybu.")
                             .font(Theme.Typo.body).foregroundStyle(Theme.Palette.textSecondary).fixedSize(horizontal: false, vertical: true)
                         Divider().opacity(0.4)
                         Text("Automatyczny powrót do odczytu po bezczynności").font(Theme.Typo.headline).foregroundStyle(Theme.Palette.text)
@@ -299,6 +299,7 @@ struct SettingsView: View {
                 AssistantModelSettings(store: model.assistant)
                 MenuBarSettings()
                 UpdateSettings(updates: model.updates)
+                NotificationSettings(notifier: model.notifier)
                 SurfaceCard(padding: 20, radius: 20) {
                     Text("Powiadomienia i progi ostrzeżeń pojawią się w kolejnej wersji.").font(Theme.Typo.body).foregroundStyle(Theme.Palette.textSecondary)
                 }

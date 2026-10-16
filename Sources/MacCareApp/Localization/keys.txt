@@ -1,3 +1,4 @@
+ (i %lld więcej)
  (stan z %@)
  Aplikacja może zapytać o zapis.
  Dotyczy %lld elementów.
@@ -43,12 +44,18 @@
 %@ · zmiana %@ · ostatnio użyty %@
 %@, %@, %@
 %@. Zobaczysz %@ po skanie albo w trybie Profesjonalnym.
+%@: %@ → %@ · %@
 %@: Kosz opróżnia się osobnym narzędziem
 %@: aplikacja %@ jest uruchomiona
+%@: aplikacja jest zainstalowana albo działa
+%@: leży poza miejscami pozostałości
+%@: nazwa nie wskazuje aplikacji
 %@: nie należy do tej aplikacji albo leży poza dozwolonymi miejscami
 %@: nie występuje w wynikach skanowania
+%@: niedozwolone miejsce, brak elementu albo dowiązanie
 %@: odrzucone przez politykę ścieżek
 %@: zajęte %@ z %@
+%@: zmienił się od wyboru – odśwież listę
 %lld cykli
 %lld do instalacji
 %lld proc. · %@
@@ -98,6 +105,7 @@ App Store
 Apple
 Apple Foundation Models (na urządzeniu)
 Application Support i kontener mogą zawierać Twoje dokumenty i ustawienia – dlatego nie są zaznaczone.
+Application Support i kontenery mogą zawierać dokumenty i ustawienia – zaznacz tylko, jeśli na pewno nie wrócisz do tej aplikacji
 Archiwa
 Archiwa pobranych formuł. `brew` pobierze je w razie potrzeby.
 Archiwa wydanych buildów (potrzebne do symbolikacji raportów). Tylko świadomy wybór.
@@ -149,6 +157,7 @@ Brak operacji z pomiarem przed/po.
 Brak pliku programu
 Brak plików spełniających kryteria.
 Brak podpisu
+Brak pomiarów
 Brak połączenia z GitHubem – spróbuj później.
 Brak raportów dla tego procesu.
 Brak raportów.
@@ -193,7 +202,6 @@ Cursor – pamięć podręczna
 Cykle ładowania
 Czas bezczynności do powrotu do odczytu
 Czas operacji na małych plikach
-Czas rozwiązania nazw (getaddrinfo; wynik może pochodzić z pamięci podręcznej):
 Czas stałego zadania CPU
 Czekam na odczyt (okno hasła systemu)…
 Czy w autostarcie jest coś niepokojącego?
@@ -206,6 +214,7 @@ Czyści rozmowę na ekranie (wpisy w Dzienniku operacji zostają).
 Częściowo – nie wszystko trafiło do Kosza
 Częściowo: do Kosza trafiło %lld z %lld (%@); nie udało się: %@.
 Częściowo: do Kosza trafiło %lld z %lld (%@); nie udało się: %@.%@
+Część historii nie została zapisana lub odczytana (błędów: %lld). Ostatni: %@
 Część kopii to klony APFS – współdzielą dane, ich usunięcie nie zwolni miejsca.
 Część lokalizacji nie została sprawdzona. Skan tylko sprawdza – niczego nie zmienia na Macu.
 Część miejsca zajmują kopie zapasowe systemu
@@ -237,6 +246,7 @@ Domeny wyszukiwania: %@
 Domyślnie MacCare niczego nie zmienia. Edycja odblokowuje wyłącznie przenoszenie do Kosza.
 Domyślnie: Twój folder domowy. Skan tylko czyta.
 Dostawca MLX nie jest jeszcze włączony w tej wersji (zaplanowany – patrz docs/PLAN.md).
+Dostępna nowa wersja MacCare
 Dostępna wersja %@.
 Dostępne aktualizacje: %@
 Dostępne po policzeniu
@@ -261,8 +271,8 @@ Edycja wyłączona po %@ bezczynności – wróciłem do trybu tylko do odczytu.
 Edycja włączona – tylko „Przenieś do Kosza” (Moje pliki, Porządki, Aplikacje)%@
 Edycja włączona. Zaznacz pliki w „Moje pliki”, aby przenieść je do Kosza.
 Edycja włączona. Zaznaczone pliki przeniesiesz do Kosza w „Moje pliki” (widok Profesjonalny).
-Edycja – odblokowuje wyłącznie przenoszenie do Kosza: pliki zaznaczone w „Moje pliki”, pozycje zaznaczone w Porządkach i odinstalowanie wybranej aplikacji, zawsze po potwierdzeniu. Czyszczenie przez kwarantannę, trwałe usuwanie, opróżnianie Kosza, agenci autostartu i polecenia administratora czekają na poprawki bezpieczeństwa kwarantanny. Asystent AI nigdy nie przełącza trybu.
-Edycja: działa tylko „Przenieś do Kosza” (Moje pliki, Porządki, odinstalowanie); wszystko inne czeka na zakończenie poprawek bezpieczeństwa kwarantanny.
+Edycja – odblokowuje wyłącznie przenoszenie do Kosza: pliki zaznaczone w „Moje pliki”, pozycje zaznaczone w Porządkach, odinstalowanie wybranej aplikacji i zaznaczone pozostałości po aplikacjach, zawsze po potwierdzeniu. Czyszczenie przez kwarantannę, trwałe usuwanie, opróżnianie Kosza, agenci autostartu i polecenia administratora czekają na poprawki bezpieczeństwa kwarantanny. Asystent AI nigdy nie przełącza trybu.
+Edycja: działa tylko „Przenieś do Kosza” (Moje pliki, Porządki, odinstalowanie i pozostałości po aplikacjach); wszystko inne czeka na zakończenie poprawek bezpieczeństwa kwarantanny.
 Element chroniony przez system (SIP) albo zablokowany przed zmianami
 Element logowania
 Element nie istnieje: %@
@@ -272,7 +282,7 @@ Elementy (%lld)
 Elementy przeniesione przez Czyszczenie pojawią się tutaj i będzie można je przywrócić.
 Elementy trafiły do kwarantanny (przeniesienie w obrębie dysku) lub do Kosza – wolne miejsce zwiększy się dopiero po opróżnieniu kwarantanny (automatycznie po 7 dniach) lub Kosza. Pomiar obejmuje też inne zapisy na dysku.
 Elementy trafiły do systemowego Kosza (przeniesienie w obrębie dysku) – wolne miejsce zwiększy się dopiero po opróżnieniu Kosza w Finderze. Możesz je stamtąd przywrócić (Odłóż).
-Elementy w katalogu tymczasowym nieużywane od 3 dni.
+Elementy w katalogu tymczasowym nieużywane od 3 dni. Długo działające programy mogą tu trzymać blokady i gniazda – dlatego nie są zaznaczane same.
 Elementy z kwarantanny przywrócisz w Historii; elementy z Kosza – z Findera (%lld).
 Elementów Apple nie można wyłączyć.
 Elementów Apple nie wyłączam
@@ -337,8 +347,9 @@ Kolor = przeważający rodzaj zawartości
 Komponent
 Kondycja < 60%
 Kondycja < 80%
-Konfiguracja DNS i czas rozwiązania kilku domen testowych.
+Konfiguracja DNS tego Maca (serwery, domeny wyszukiwania) – bez wysyłania zapytań.
 Kontekst przekracza okno modelu
+Kontenery
 Kontenery i maszyny wirtualne
 Kontrola pobranych aplikacji
 Kopie stron i skryptów.
@@ -436,6 +447,7 @@ Narzędzia programistyczne
 Narzędzie dostępne wyłącznie dla użytkownika z interfejsu: %@
 Nasłuchujące porty dostępne z sieci
 Nazwa
+Nic nie przeniesiono: %@.
 Nic nie trafiło do Kosza.
 Nic nie trafiło do Kosza.%@%@
 Nic nie wymaga uwagi.
@@ -457,6 +469,9 @@ Nie udało się otworzyć bazy historii – historia i ustawienia z tej sesji ni
 Nie udało się przenieść aplikacji do Kosza (%@). Jej danych nie ruszono – usuń aplikację w Finderze.
 Nie udało się przenieść: %@
 Nie udało się sprawdzić, czy aplikacja działa – nic nie ruszono
+Nie udało się sprawdzić, które aplikacje działają – nic nie ruszono
+Nie udało się ustalić listy zainstalowanych aplikacji – nic nie ruszono
+Nie udało się zapisać spisu kwarantanny – elementy są bezpieczne (opis leży obok każdego), ale spis może być nieaktualny: %@
 Nie udało się zatrzymać agenta „%@” (launchctl, kod %d). Plist nie został ruszony.
 Nie udało się: %@
 Nie używamy prywatnych interfejsów (SMC/IOHID), więc temperatur poszczególnych rdzeni nie będzie.
@@ -479,6 +494,7 @@ Nieprawidłowa etykieta agenta
 Nieprawidłowa nazwa aplikacji
 Nieprawidłowa odpowiedź modelu: %@
 Nieprawidłowy podpis
+Niespójne dane wyboru – odśwież listę
 Nieużywana aplikacja zajmuje dużo pamięci
 Nieużywane
 Nieużywane 90+ dni
@@ -487,6 +503,7 @@ Nieznane narzędzie: %@
 Nieznany argument: %@
 Nieznany wpis kwarantanny: %@
 Niskie
+Nowy pomiar „po” – np. po opróżnieniu Kosza, bo dopiero wtedy wraca miejsce na dysku
 NuGet – pakiety
 ODRZUCONO (%@): „%@” nie zostało wykonane – tylko podgląd. Nie zakładaj, że zostało wykonane.
 Obciążenie CPU
@@ -502,9 +519,11 @@ Ochrona
 Ochrona integralności systemu (SIP)
 Ochrona integralności systemu (SIP) jest wyłączona
 Ochrona systemu
+Ochrona: wymaga uwagi
 Oczekujące aktualizacje Apple
 Odblokowane: „Przenieś do Kosza”
 Odcisk pakietu z chwili wyboru
+Odciski elementów z chwili wyboru (w tej samej kolejności)
 Odciski elementów z chwili zaznaczenia (urządzenie:inode:rozmiar:mtime:rodzaj), w kolejności ścieżek
 Odczyt się nie powiódł: %@
 Odczyt się powiódł, ale nie rozpoznaliśmy formatu wyjścia – zamiast zgadywać, nic nie pokazujemy.
@@ -589,7 +608,7 @@ Pierwszy build potrwa dłużej.
 Pilne
 Playwright – pobrane przeglądarki
 Plik konfiguracyjny wskazuje na nieistniejący program (%@). Najczęściej to pozostałość po odinstalowanej aplikacji.
-Pliki i foldery zaznaczone w „Moje pliki”, pozycje zaznaczone w Porządkach i odinstalowanie wybranej aplikacji – zawsze po Twoim potwierdzeniu. Trafiają do Kosza macOS, więc możesz je stamtąd przywrócić (Finder → Kosz → Odłóż). Nic nie jest kasowane na stałe.
+Pliki i foldery zaznaczone w „Moje pliki”, pozycje zaznaczone w Porządkach, odinstalowanie wybranej aplikacji i zaznaczone pozostałości po aplikacjach – zawsze po Twoim potwierdzeniu. Trafiają do Kosza macOS, więc możesz je stamtąd przywrócić (Finder → Kosz → Odłóż). Nic nie jest kasowane na stałe.
 Pliki instalacyjne (.dmg, .pkg, .xip, .iso)
 Pliki tymczasowe
 Pliki tymczasowe użytkownika
@@ -605,6 +624,7 @@ Pobrane pody.
 Pobrane załączniki Poczty
 Podgląd
 Podgląd opróżnienia kwarantanny
+Podgląd przeniesienia do Kosza
 Podgląd przywrócenia
 Podgląd usunięcia zaznaczonych
 Podgląd wyłączenia
@@ -634,6 +654,7 @@ Policz ten folder ponownie (domyślnie pokazujemy wynik z pamięci)
 Policzono %lld z %lld pozycji
 Pomiar obejmuje też inne zapisy na dysku, a lokalne migawki Time Machine mogą wstrzymać zwrot miejsca.
 Pomiar obejmuje też inne zapisy na dysku.
+Pomiar przed i po wykonuje się przy każdym przeniesieniu do Kosza w trybie Edycja.
 Pomiary
 Pomiary systemu…
 Pominięto nieistniejące dowody: %@.
@@ -650,16 +671,20 @@ Porządki: %@ do Kosza
 Porównuję miniatury zdjęć…
 Porównuję pliki – przy dużych folderach może to potrwać kilka minut.
 Potwierdzone pomiarem
+Powiadamiaj o ważnych sprawach
 Powiadomienia
 Powiadomienia i progi ostrzeżeń pojawią się w kolejnej wersji.
 Powody
 Poza katalogiem domowym – inne wolumeny niż startowy nie są obsługiwane (Kosz działa tam inaczej)
-Poza zakresem Edycji – w trybie Edycja działa przenoszenie do Kosza (zaznaczone pliki, Porządki, odinstalowanie); kwarantanna, opróżnianie Kosza i operacje systemowe czekają na poprawki bezpieczeństwa
+Poza zakresem Edycji – w trybie Edycja działa przenoszenie do Kosza (zaznaczone pliki, Porządki, odinstalowanie, pozostałości po aplikacjach); kwarantanna, opróżnianie Kosza i operacje systemowe czekają na poprawki bezpieczeństwa
 Poziom naładowania
 Pozostałe (%lld)
 Pozostałości aktualizacji
 Pozostałości po aplikacjach
+Pozostałości po aplikacjach (%@)
+Pozostałości po aplikacjach do Kosza
 Prawdopodobne
+Preferencje
 Presja termiczna
 Problem
 Problemy wykryte przez deterministyczny silnik reguł (z poziomem pewności i dowodami).
@@ -705,16 +730,20 @@ Przeniesienie do Kosza: %@ (%@)
 Przeniesienie do kwarantanny / Kosza
 Przeniesienie zaznaczonych plików do Kosza
 Przeniesiono %@ (%@). Odrzucono: %lld. Błędy: %lld.
+Przeniesiono częściowo: %lld do Kosza, %lld zostało na miejscu.
 Przeniesiono do Kosza
+Przeniesiono do Kosza %@ (%@). Przywrócisz je w Finderze.
 Przeniesiono do Kosza: %@ (%@). Możesz je przywrócić w Finderze (Kosz → Odłóż).
 Przeniesiono do Kosza: %@ (%@). Możesz je przywrócić w Finderze (Kosz → Odłóż).%@
 Przenieś do Kosza
 Przenieś do Kosza (%lld · %@)
 Przenieś do Kosza (zaznaczone: %@)…
 Przenieś do Kosza – tylko w trybie Edycja
+Przenieś zaznaczone do Kosza…
 Przenosi do systemowego Kosza aplikację wybraną przez użytkownika i zaznaczone dane tej aplikacji z ~/Library. Nigdy trwałe usuwanie; wszystko przywrócisz w Finderze.
 Przenosi do systemowego Kosza pliki i foldery zaznaczone RĘCZNIE przez użytkownika w „Moje pliki” (nigdy trwałe usunięcie; elementy można przywrócić w Finderze).
 Przenosi do systemowego Kosza pozycje zaznaczone przez użytkownika w Porządkach (pamięć podręczna, logi, pliki tymczasowe…). Nigdy trwałe usuwanie; elementy przywrócisz w Finderze.
+Przenosi do systemowego Kosza zaznaczone pozostałości po aplikacjach, których już nie ma na Macu. Nigdy trwałe usuwanie; wszystko przywrócisz w Finderze.
 Przenosi zaznaczone elementy do Kosza macOS – przywrócisz je w Finderze (Kosz → Odłóż). Nic nie jest kasowane na stałe.
 Przenosi zaznaczone kopie do Kosza macOS – przywrócisz je w Finderze (Kosz → Odłóż).
 Przenosi zaznaczone zdjęcia do Kosza macOS – przywrócisz je w Finderze.
@@ -784,6 +813,7 @@ Spróbuj ponownie
 Stabilność
 Stan Maca w skrócie (procesor, pamięć, wolne miejsce, aktualizacje) i szybki Smart Scan. Tylko odczyt.
 Stan Maca: %@
+Stan okien
 Stan termiczny systemu. Czujników SMC nie odczytujemy (wymagają prywatnych interfejsów), więc nie pokazujemy temperatur CPU/GPU.
 Stan termiczny: %@. macOS obniża taktowanie, żeby się schłodzić – to wyjaśnia spadek wydajności w tym momencie.
 Stan wg systemu: %@
@@ -827,6 +857,7 @@ Temperatura
 Temperatury poszczególnych rdzeni są niedostępne bez prywatnych interfejsów systemu – nie zgadujemy. Próbka z %@.
 Ten Mac nie ma baterii lub system nie udostępnia danych.
 Ten moduł jest w budowie – funkcja nie jest jeszcze dostępna.
+Test rozwiązywania nazw jest wyłączony – wymagałby zapytań do serwerów DNS w internecie.
 To narzędzie wywołuje wyłącznie użytkownik z interfejsu – zaznaczanie plików do Kosza nie jest dostępne dla asystenta ani automatów
 To nie jest aplikacja w /Applications ani ~/Applications
 To ostatnia niezaznaczona kopia – jedna musi zostać
@@ -864,9 +895,11 @@ Tylko odczyt
 Tylko odczyt danych diagnostycznych.
 Tylko odczyt – MacCare analizuje i pokazuje podgląd, niczego nie zmienia w systemie. Tak zaczyna się KAŻDE uruchomienie; wybór „Edycja” nie jest zapamiętywany.
 Tylko odczyt – żeby przenosić pliki do Kosza, włącz tryb Edycja.
-Tylko odczyt: MacCare niczego nie zmienia w systemie. „Edycja” odblokowuje wyłącznie przenoszenie do Kosza (Moje pliki, Porządki, odinstalowanie).
+Tylko odczyt: MacCare niczego nie zmienia w systemie. „Edycja” odblokowuje wyłącznie przenoszenie do Kosza (Moje pliki, Porządki, odinstalowanie i pozostałości po aplikacjach).
 Tylko raporty użytkownika w ~/Library/Logs/DiagnosticReports.
+Tylko wpisy pierwszego poziomu w Application Support, pamięci podręcznej, Preferencjach, Kontenerach i Stanie okien, nazwane identyfikatorem aplikacji, której nie ma i która nie działa; zawsze do Kosza.
 Tylko znane reguły; brak wniosku ≠ brak problemu.
+Tylko: mało miejsca na dysku (poniżej 10 GB), krytyczny problem w Ochronie i nowa wersja MacCare (gdy sprawdzanie aktualizacji ją znajdzie). Każdy rodzaj najwyżej raz na dobę; nic nie jest wysyłane poza Twojego Maca.
 Typy zdarzeń: %@. Ostatnie: %@. Przyczynę może wyjaśnić analiza raportu – poproś asystenta.
 Uprawnienie nie jest zapamiętywane i nie powstają żadne usługi pomocnicze – przy następnym odczycie zapytam znowu.
 Uruchamiane automatycznie programy z katalogu domowego lub Homebrew nie mają zaufanego podpisu – to typowe dla własnych skryptów i środowisk deweloperskich, a nie dla złośliwego oprogramowania. Pierwsze: %@%@.
@@ -897,6 +930,7 @@ Wagi modeli pobrane przez torch.hub.
 Warto poprawić zabezpieczenia
 Wartość „%@” nie zgadza się z pomiarem (%@) – przypuszczenie.
 Wartość „%@” niedozwolona dla %@
+Wersja %@ jest na stronie wydań. MacCare niczego nie pobiera sam – otwórz Ustawienia → Aktualizacje.
 Whisper – modele
 Wideo
 Wideo i audio
@@ -913,7 +947,7 @@ Wolne < 5%
 Wolne miejsce na dysku
 Wolne na dysku
 Wpis kwarantanny wskazuje poza jej katalog (uszkodzony lub podmieniony manifest) – nic nie ruszono: %@
-Wpisy w ~/Library nazwane identyfikatorem aplikacji, której nie ma w folderach Programy. To heurystyka: część może należeć do narzędzi bez aplikacji (np. wiersz poleceń) albo do aplikacji na innym dysku – sprawdź przed usunięciem.
+Wpisy w ~/Library nazwane identyfikatorem aplikacji, której system nie zna – ani w folderach Programy, ani w innym miejscu. To heurystyka: część może należeć do narzędzi bez aplikacji (np. wiersz poleceń) – sprawdź przed usunięciem. Dane aplikacji (Application Support, kontenery) zaznaczasz osobno.
 Wskazane dowody nie istnieją (%@) – przypuszczenie.
 Współdzielony magazyn pnpm. Projekty mogą do niego linkować – po usunięciu wykonaj `pnpm install`.
 Wstecz
@@ -962,6 +996,7 @@ Włącz edycję…
 Włączono tryb Edycja (zakres: tylko „Przenieś do Kosza” – zaznaczone pliki, Porządki, odinstalowanie; powrót do odczytu po %lld min bezczynności).
 Włączyć tryb Edycja?
 Wśród danych są Application Support lub kontener aplikacji – mogą zawierać Twoje dokumenty i ustawienia.
+Wśród zaznaczonych są Application Support lub kontenery – mogą zawierać dokumenty i ustawienia, gdyby aplikacja wróciła.
 Wśród zaznaczonych są pliki w chmurze (iCloud/File Provider). Bez tego przełącznika zostaną pominięte.
 XProtect (sygnatury)
 XProtect Remediator
@@ -1016,6 +1051,8 @@ Zaznacz zdjęcia do usunięcia. Jedno zdjęcie z każdej grupy zawsze zostaje.
 Zaznacz zdjęcie do przeniesienia do Kosza
 Zaznaczone (we wszystkich widokach): %@ · %@
 Zaznaczone dane aplikacji w ~/Library
+Zaznaczone pozostałości trafią do Kosza – przywrócisz je w Finderze
+Zaznaczone pozostałości w ~/Library
 Zaznaczone pozycje trafią do Kosza – miejsce wróci po jego opróżnieniu w Finderze.
 Zaznaczono %lld · odzyskasz ok. %@
 Zaznaczono: %lld · %@
@@ -1028,6 +1065,7 @@ Zezwól także na pliki w chmurze (usunie je też z chmury) – osobny przełąc
 Zmiana rozmiaru od pomiaru z %@
 Zmiana trybu wykonania (Tylko odczyt ↔ Edycja)
 Zmiana zmierzona po opróżnieniu Kosza. Pomiar obejmuje też inne zapisy na dysku.
+Zmierz ponownie teraz
 Zmierzona zmiana wolnego miejsca: %@%@
 Zmierzona zmiana wolnego miejsca: %@%@ – miejsce wróci po opróżnieniu Kosza w Finderze.
 Zmierzone odzyskane miejsce łącznie: %@%@ (suma pomiarów po operacjach, nie deklaracji)
@@ -1036,14 +1074,17 @@ Znajdź dane do bezpiecznego usunięcia
 Znajdź pamięć podręczną, logi i pozostałości, które można bezpiecznie odzyskać – z uczciwym rozliczeniem, ile miejsca realnie wróci.
 Zniknęło od %@: %@ · %@
 Zobacz, co obciąża procesor, pamięć i baterię – i czy powodem jest aplikacja, czy system.
+Zostało %@. Porządki w MacCare pokażą, co można bezpiecznie przenieść do Kosza.
 Zwolnienie CPU/pamięci
 Zwolnienie miejsca na dysku
+Zwolnienie miejsca po odinstalowanych aplikacjach
 Zwolnienie miejsca zajętego przez kwarantannę
 Zwykle znikają po restarcie Maca.
 adres nielokalny
 aktualizacji – system aktualny
 anulowano
 aplikacja uruchomiona
+baza zapisana przez nowszą wersję MacCare (schemat %lld > %lld) – nie jest zmieniana
 bezpieczne
 brak
 brak (opcjonalny)
@@ -1052,10 +1093,10 @@ brak danych
 brak dostępu do %@ (%@%@) – nie ma ich na mapie
 brak mierzalnego efektu
 błąd
-błąd (%@)
 chroniona lokalizacja
 chroniony obszar
 czeka na zgodę
+dane aplikacji
 do 14B parametrów (np. qwen2.5:14b)
 do 32B parametrów (np. qwen2.5:32b)
 do 3B parametrów (np. qwen2.5:3b, llama3.2:3b)
@@ -1077,10 +1118,12 @@ krytyczny
 kwarantanna
 leży na innym wolumenie niż katalog domowy – Kosz działa tam inaczej
 liczę…
+macOS nie pozwala MacCare wyświetlać powiadomień – włącz je w Ustawieniach systemowych → Powiadomienia.
 macOS raportuje stan: %@.
 macOS zgłasza %@ ciśnienie pamięci – system kompresuje pamięć i zrzuca ją na dysk.
 macOS zgłosił oczekujące aktualizacje%@. Aktualizacje usuwają luki bezpieczeństwa%@. MacCare ich nie instaluje: zrób to w Ustawieniach systemowych → Ogólne → Uaktualnienia.
 metodologia %@
+model działa w chmurze – MacCare używa wyłącznie modeli lokalnych
 na baterii
 nie można otworzyć bazy %@
 nie wiadomo
@@ -1117,6 +1160,7 @@ poprawa
 potwierdzone pomiarem
 poważny (throttling)
 prawdopodobne
+przed: %@ · po: %@
 przeniesiono %@ · pozostało %lld dn. do automatycznego usunięcia
 przypuszczenie
 przyznany
@@ -1125,6 +1169,7 @@ system nie udostępnia kondycji
 słaba
 trwale
 tryb Edycja wygasł – nic nie ruszono
+tło – nie wlicza się do oceny
 ustaleń: %lld
 usług nasłuchuje z sieci
 używana dziś

@@ -164,6 +164,10 @@ public struct TrashSelectedTool: AgentTool {
         }
         for it in plan.accepted {
             let name = (it.target as NSString).lastPathComponent
+            // Audyt 16.10 (3.5): Edycja mogła wygasnąć w trakcie operacji wieloelementowej – kolejne elementy zostają na miejscu (jak w pozostałych narzędziach Kosza).
+            guard ExecutionGuard.allows(.trashSelected) else {
+                failed.append(.object(["path": .string(it.target), "reason": .string(String(localized: "tryb Edycja wygasł – nic nie ruszono"))])); failedNames.append(name); continue
+            }
             var seen = Set<FileID>()
             let bytes = DiskUsage.measure(it.target, deadline: Date().addingTimeInterval(15), seen: &seen).allocated
             // Ponowna weryfikacja TUŻ przed przeniesieniem (lstat, bez podążania za dowiązaniami): ta sama ścieżka po kanonizacji katalogu nadrzędnego

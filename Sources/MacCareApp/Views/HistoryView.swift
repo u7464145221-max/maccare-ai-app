@@ -16,7 +16,11 @@ struct HistoryView: View {
                     }
                     Spacer()
                 }
-                SegmentedSwitch(selection: $model.historyTab, options: Array(HistoryTab.allCases), title: { $0.title }, module: .history, width: 460, accessibilityName: String(localized: "Sekcja historii"))
+                if let problem = model.historyProblem {
+                    Label(problem, systemImage: "exclamationmark.triangle.fill").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.warning)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                SegmentedSwitch(selection: $model.historyTab, options: Array(HistoryTab.allCases), title: { $0.title }, module: .history, width: 560, accessibilityName: String(localized: "Sekcja historii"))
             }
             .padding(Theme.Space.xl)
             Divider()
@@ -24,6 +28,7 @@ struct HistoryView: View {
                 switch model.historyTab {
                 case .scans: scansList
                 case .operations: operationsList
+                case .measurements: measurementsList
                 case .quarantine: quarantineList
                 }
             }
@@ -31,6 +36,48 @@ struct HistoryView: View {
         .pageBackground()
         .navigationTitle("Historia")
         .onAppear { model.reloadHistory() }
+    }
+
+    // MARK: Pomiary przed/po (F22)
+    private var measurementsList: some View {
+        List {
+            if model.benchmarks.isEmpty {
+                EmptyState(symbol: "gauge.with.dots.needle.33percent", title: String(localized: "Brak pomiarów"),
+                           detail: String(localized: "Pomiar przed i po wykonuje się przy każdym przeniesieniu do Kosza w trybie Edycja."))
+            }
+            ForEach(model.benchmarks) { c in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: Theme.Space.m) {
+                        Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Theme.Palette.accent).frame(width: 22)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(c.operation).font(Theme.Typo.body.weight(.medium)).foregroundStyle(Theme.Palette.text)
+                            Text(String(localized: "przed: \(c.before.takenAt.formatted(date: .abbreviated, time: .shortened)) · po: \(c.after.takenAt.formatted(date: .abbreviated, time: .shortened))"))
+                                .font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary)
+                        }
+                        Spacer()
+                        Pill(text: c.overall.label, color: Self.verdictColor(c.overall))
+                        Button("Zmierz ponownie teraz") { Task { await model.remeasure(c.id) } }.buttonStyle(.soft)
+                            .help(String(localized: "Nowy pomiar „po” – np. po opróżnieniu Kosza, bo dopiero wtedy wraca miejsce na dysku"))
+                    }
+                    ForEach(c.metrics.filter { $0.verdict != .insufficientData }, id: \.metric) { m in
+                        Text("\(m.metric.label): \(m.metric.format(m.beforeMean)) → \(m.metric.format(m.afterMean)) · \(Self.verdictText(c, m))")
+                            .font(Theme.Typo.caption.monospacedDigit()).foregroundStyle(Theme.Palette.textSecondary).padding(.leading, 34)
+                    }
+                    if !c.conditionWarnings.isEmpty {
+                        Text(String(localized: "Zastrzeżenia: ") + c.conditionWarnings.joined(separator: "; ")).font(Theme.Typo.caption).foregroundStyle(Theme.Palette.warning).padding(.leading, 34)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .scrollContentBackground(.hidden)
+    }
+
+    static let backgroundLabel = String(localized: "tło – nie wlicza się do oceny")
+    static func verdictText(_ c: BenchmarkComparison, _ m: MetricComparison) -> String { c.isDecisive(m.metric) ? m.verdict.label : backgroundLabel }
+
+    static func verdictColor(_ v: EffectVerdict) -> Color {
+        switch v { case .improved: return Theme.Palette.ok; case .worsened: return Theme.Palette.warning; case .noMeasurableEffect, .insufficientData: return Theme.Palette.textSecondary }
     }
 
     // MARK: Skany
@@ -87,6 +134,7 @@ struct HistoryView: View {
         case "quarantine_cleanup_items": return String(localized: "Przeniesienie do kwarantanny / Kosza")
         case "trash_cleanup_items": return String(localized: "Porządki – przeniesienie do Kosza")
         case "uninstall_app_to_trash": return String(localized: "Odinstalowanie aplikacji do Kosza")
+        case "trash_app_leftovers": return String(localized: "Pozostałości po aplikacjach do Kosza")
         case "empty_trash": return String(localized: "Opróżnienie Kosza")
         case "restore_from_quarantine": return String(localized: "Przywrócenie z kwarantanny")
         case "purge_quarantine": return String(localized: "Opróżnienie kwarantanny")
