@@ -124,8 +124,8 @@ public enum ParallelTreeMeasure {
     /// Mierzy katalogi `names` w folderze `dir` (wywołujący wcześniej odsiewa pliki, dowiązania i katalogi bez dostępu). Blokuje do końca;
     /// `onChild` – z wątku puli, dokładnie raz na każde dziecko. `limit` wątków (zwykle `ScanConcurrency.limit()`).
     public static func measureDirectories(in dir: String, names: [String], limit: Int, registry: HardLinkRegistry, trackKinds: Bool = true,
-                                          shouldStop: @escaping () -> Bool = { false }, gauge: ParallelGauge? = nil,
-                                          onChild: @escaping (Outcome) -> Void) {
+                                          shouldStop: @escaping @Sendable () -> Bool = { false }, gauge: ParallelGauge? = nil,
+                                          onChild: @escaping @Sendable (Outcome) -> Void) {
         let jobs = names.map { Job(name: $0, root: dir + "/" + $0) }
         let rootFD = open(dir, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
         guard DiskUsage.useBulkWalker, rootFD >= 0 else {

@@ -45,3 +45,23 @@ public enum DatalessPolicy {
         #endif
     }
 }
+
+/// Audyt 16.10 (P2): równoległy pomiar mapy trzyma otwarte katalogi (pomiar na ~/Library: szczyt +75 deskryptorów). Aplikacje z okienkiem startują
+/// zwykle z miękkim limitem 256 – razem z bazą, FSEvents i potokami poleceń zapas byłby niewielki. Proces MacCare podnosi WŁASNY miękki limit
+/// (w granicach twardego limitu systemu, najwyżej do `target`) – dotyczy tylko tego procesu, niczego w systemie nie zmienia.
+public enum FileDescriptorLimit {
+    /// Zwraca miękki limit po zmianie (albo bieżący, gdy już był wystarczający).
+    @discardableResult
+    public static func raise(to target: UInt64 = 4096) -> UInt64 {
+        #if canImport(Darwin)
+        var l = rlimit()
+        guard getrlimit(RLIMIT_NOFILE, &l) == 0 else { return 0 }
+        let wanted = min(target, l.rlim_max)
+        guard l.rlim_cur < wanted else { return l.rlim_cur }
+        var n = l; n.rlim_cur = wanted
+        return setrlimit(RLIMIT_NOFILE, &n) == 0 ? wanted : l.rlim_cur
+        #else
+        return 0
+        #endif
+    }
+}

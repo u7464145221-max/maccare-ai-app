@@ -99,9 +99,16 @@ extension SQLiteDatabase.Value {
 /// Historia: skany, operacje (audyt), szeregi pomiarów, porównania przed/po, ustawienia.
 public final class HistoryStore: AuditSink, @unchecked Sendable {
     public let db: SQLiteDatabase
-    public static let schemaVersion = 1
+    public static let schemaVersion = 2
     /// Migracje schematu: klucz n = przejście z wersji n do n+1 (dziś brak – schemat 1). Nowa kolumna = nowy wpis i `schemaVersion` + 1.
-    static let migrations: [Int: (SQLiteDatabase) throws -> Void] = [:]
+    static let migrations: [Int: @Sendable (SQLiteDatabase) throws -> Void] = [
+        // 1 → 2 (audyt 16.10): znacznik zagęszczonej próbki jako kolumna. Wcześniej rozpoznawany po czasie „pełna godzina + 30 min”, więc zwykła
+        // próbka zapisana dokładnie o hh:30:00 była brana za średnią i zostawała obok niej (dwa punkty tej samej godziny).
+        1: { db in
+            try db.exec("ALTER TABLE samples ADD COLUMN agg INTEGER NOT NULL DEFAULT 0")
+            try db.exec("UPDATE samples SET agg = 1 WHERE (at - CAST(at/3600 AS INTEGER)*3600) = 1800")
+        },
+    ]
     /// Wersja schematu zastana w pliku przy otwarciu (nil = nowa baza).
     public private(set) var storedSchemaVersion: Int?
 
@@ -147,7 +154,7 @@ public final class HistoryStore: AuditSink, @unchecked Sendable {
             mode TEXT, outcome TEXT, args TEXT, message TEXT);
         CREATE TABLE IF NOT EXISTS reclaimed(id INTEGER PRIMARY KEY AUTOINCREMENT, at REAL NOT NULL, operation TEXT,
             estimated INTEGER, measured INTEGER, note TEXT);
-        CREATE TABLE IF NOT EXISTS samples(at REAL NOT NULL, metric TEXT NOT NULL, value REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS samples(at REAL NOT NULL, metric TEXT NOT NULL, value REAL NOT NULL, agg INTEGER NOT NULL DEFAULT 0);
         CREATE INDEX IF NOT EXISTS samples_metric_at ON samples(metric, at);
         CREATE TABLE IF NOT EXISTS findings_log(at REAL NOT NULL, finding_id TEXT NOT NULL, severity INTEGER, certainty TEXT, title TEXT);
         CREATE TABLE IF NOT EXISTS benchmarks(id TEXT PRIMARY KEY, at REAL NOT NULL, operation TEXT, verdict TEXT, payload TEXT);
@@ -227,14 +234,15 @@ public final class HistoryStore: AuditSink, @unchecked Sendable {
     }
     /// Retencja: próbki starsze niż N dni są agregowane (średnia godzinowa) – kontrola rozmiaru bazy.
     public func compactSamples(olderThan days: Double = 7, now: Date = Date()) {
-        let cutoff = now.timeIntervalSince1970 - days * 86400
+        // audyt 16.10 (P3): odcięcie wyrównane do PEŁNEJ godziny – inaczej godzina na granicy dostawała przy kolejnym zagęszczaniu drugi punkt średniej
+        let cutoff = ((now.timeIntervalSince1970 - days * 86400) / 3600).rounded(.down) * 3600
         attempt("zagęszczanie próbek", ()) { try db.transaction {
             try db.run("""
-            INSERT INTO samples(at, metric, value)
-            SELECT CAST(at/3600 AS INTEGER)*3600 + 1800 AS hour, metric, AVG(value) FROM samples
-            WHERE at < ? AND (at - CAST(at/3600 AS INTEGER)*3600) <> 1800 GROUP BY hour, metric
+            INSERT INTO samples(at, metric, value, agg)
+            SELECT CAST(at/3600 AS INTEGER)*3600 + 1800 AS hour, metric, AVG(value), 1 FROM samples
+            WHERE at < ? AND agg = 0 GROUP BY hour, metric
             """, [.double(cutoff)])
-            try db.run("DELETE FROM samples WHERE at < ? AND (at - CAST(at/3600 AS INTEGER)*3600) <> 1800", [.double(cutoff)])
+            try db.run("DELETE FROM samples WHERE at < ? AND agg = 0", [.double(cutoff)])
         } }
     }
 

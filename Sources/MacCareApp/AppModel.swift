@@ -263,6 +263,7 @@ final class AppModel: ObservableObject {
     ///   Dzięki temu model z syntetycznym `home` nigdy nie skanuje (a więc nie ruszy) prawdziwego `$TMPDIR`.
     init(dataDir: URL? = nil, home: String = NSHomeDirectory(), tempDir: String? = nil, sensorSampler: SensorSampling = PowerMetricsSampler(), monitorEditActivity: Bool = true, trash: TrashService? = nil) {
         DatalessPolicy.preventMaterialization()                                         // F9: skan nigdy nie pobiera plików z chmury (iCloud/File Provider)
+        FileDescriptorLimit.raise()                                                       // audyt 16.10: zapas deskryptorów dla równoległego skanu
         self.home = home
         self.sensorSampler = sensorSampler
         self.monitorEditActivity = monitorEditActivity

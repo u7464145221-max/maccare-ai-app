@@ -282,7 +282,10 @@ final class DiskMapStore: ObservableObject {
         if force { await measure(dir, keepVisible: true); return }
         if changeJournalEnabled, let since = l.checkpoint {
             let fresh = ChangeJournal.checkpoint(for: dir), timeout = changeJournalTimeout
-            let changes = await Task.detached(priority: .utility) { ChangeJournal.changes(under: dir, since: since, timeout: timeout) }.value
+            // audyt 16.10 (P2): odczyt dziennika czeka (do kilku sekund) – na wątku GCD, a nie na wątku ograniczonej puli Swift Concurrency
+            let changes = await withCheckedContinuation { (c: CheckedContinuation<ChangeJournal.Changes?, Never>) in
+                DispatchQueue.global(qos: .utility).async { c.resume(returning: ChangeJournal.changes(under: dir, since: since, timeout: timeout)) }
+            }
             guard dir == current else { return }                                        // użytkownik przeszedł gdzie indziej – tamten folder ma własny skan
             if let changes {
                 let plan = ChangePlanner.plan(dir: dir, changed: changes.paths, mustRescan: changes.mustRescan)
