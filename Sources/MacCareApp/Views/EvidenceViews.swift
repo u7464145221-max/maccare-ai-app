@@ -21,11 +21,12 @@ struct EvidenceChip: View {
         }
         .buttonStyle(.plain)
         .help("Pokaż dowód (pomiar)")
-        .popover(isPresented: $shown, arrowEdge: .bottom) { EvidencePopover(id: id).environmentObject(model) }
+        .popover(isPresented: $shown, arrowEdge: .bottom) { EvidencePopover(id: id).environmentObject(model).environmentObject(model.live) }
     }
 }
 
 struct EvidencePopover: View {
+    @EnvironmentObject private var live: LiveMetrics                                // dane na żywo – przeliczanie tylko tego widoku
     @EnvironmentObject var model: AppModel
     let id: String
     var body: some View {

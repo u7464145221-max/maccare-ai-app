@@ -180,16 +180,16 @@ public enum MicroBenchmark {
         return Double(DispatchTime.now().uptimeNanoseconds - t0) / 1e6
     }
     /// Czas (ms) utworzenia, odczytu i usunięcia 200 małych plików w katalogu tymczasowym.
-    public static func smallFileOpsMs(in dir: URL = FileManager.default.temporaryDirectory) -> Double {
+    /// nil, gdy którakolwiek operacja się nie udała (audyt 16.10: wcześniej nieudany zapis dawał fałszywie SZYBKI wynik).
+    public static func smallFileOpsMs(in dir: URL = FileManager.default.temporaryDirectory) -> Double? {
         let d = dir.appendingPathComponent("maccare-bench-\(UUID().uuidString)")
-        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        guard (try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)) != nil else { return nil }   // try? świadomie: wynik sprawdzany
         defer { try? FileManager.default.removeItem(at: d) }   // try? świadomie: własny katalog tymczasowy pomiaru
         let payload = Data(repeating: 0x42, count: 4096)
         let t0 = DispatchTime.now().uptimeNanoseconds
         for i in 0..<200 {
             let f = d.appendingPathComponent("f\(i)")
-            try? payload.write(to: f)
-            _ = try? Data(contentsOf: f)
+            guard (try? payload.write(to: f)) != nil, (try? Data(contentsOf: f))?.count == payload.count else { return nil }   // try? świadomie: porażka ⇒ brak pomiaru
             try? FileManager.default.removeItem(at: f)   // try? świadomie: własny plik tymczasowy pomiaru
         }
         return Double(DispatchTime.now().uptimeNanoseconds - t0) / 1e6

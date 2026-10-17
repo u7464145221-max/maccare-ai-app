@@ -12,7 +12,7 @@ struct BatteryProfile: Sendable, Equatable {
     /// Czysty parser (testowany na prawdziwym wyjściu z macOS 26.5).
     static func parse(_ json: String) -> BatteryProfile? {
         guard let data = json.data(using: .utf8),
-              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
               let items = root["SPPowerDataType"] as? [[String: Any]] else { return nil }
         for it in items {
             guard let h = it["sppower_battery_health_info"] as? [String: Any] else { continue }

@@ -35,7 +35,7 @@ public enum UpdateCheck {
 
     /// Odczyt odpowiedzi API. Nieufnie: tylko wydanie (nie szkic, nie testowe), numer wersji w tagu, strona wydania WYŁĄCZNIE z tego repozytorium.
     public static func parse(_ data: Data) -> Release? {
-        guard data.count <= 512 * 1024, let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        guard data.count <= 512 * 1024, let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
               let tag = obj["tag_name"] as? String, let v = version(tag),
               (obj["draft"] as? Bool) != true, (obj["prerelease"] as? Bool) != true,
               let html = obj["html_url"] as? String, let url = URL(string: html), url.scheme == "https", url.host == "github.com",

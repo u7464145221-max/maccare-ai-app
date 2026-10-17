@@ -97,14 +97,16 @@ final class AppModel: ObservableObject {
     @Published var historyTab: HistoryTab = .scans
 
     // MARK: Panel
-    @Published private(set) var snapshot: SystemSnapshot?
+    /// Dane na żywo – osobny obiekt (`LiveMetrics`); tutaj tylko odczyt dla logiki i testów.
+    let live = LiveMetrics()
+    var snapshot: SystemSnapshot? { live.state.snapshot }
     /// Zajętość dysku startowego odczytana od razu przy starcie (jedno szybkie zapytanie o wolumen) – zanim pojawi się pierwszy pełny pomiar.
     let bootVolumeQuick: VolumeStats? = BootVolumeQuickRead.read()
-    @Published private(set) var assessment: HealthAssessment?
+    var assessment: HealthAssessment? { live.state.assessment }
     @Published private(set) var findings: [Finding] = []
-    @Published private(set) var evidenceByID: [String: Evidence] = [:]
-    @Published private(set) var cpuLive: [Double] = []
-    @Published private(set) var memLive: [Double] = []
+    var evidenceByID: [String: Evidence] { live.state.evidenceByID }
+    var cpuLive: [Double] { live.state.cpuLive }
+    var memLive: [Double] { live.state.memLive }
     @Published private(set) var scanStage: String?
     @Published private(set) var smartSummary: SmartScanSummary?
 
@@ -174,7 +176,7 @@ final class AppModel: ObservableObject {
     /// Skrót „Włącz edycję…” z arkusza podglądu: zamyka podgląd i dopiero potem pokazuje potwierdzenie (dwa arkusze naraz SwiftUI nie pokaże).
     func requestEditModeFromPreview() async {
         await decline()
-        try? await Task.sleep(nanoseconds: 350_000_000)
+        try? await Task.sleep(nanoseconds: 350_000_000)   // try? świadomie: anulowanie zadania przerywa czekanie – oczekiwane
         requestEditMode()
     }
 
@@ -269,13 +271,13 @@ final class AppModel: ObservableObject {
         self.monitorEditActivity = monitorEditActivity
         executionState = ExecutionGuard.current                      // produkcja: jedyny stan `ExecutionGuard.shared` (zawsze „tylko odczyt” po starcie); testy: wstrzyknięty
         let dir = dataDir ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("MacCare AI", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)   // try? świadomie: brak katalogu ⇒ kolejny zapis sam zgłosi błąd
         self.dataDir = dir
         let store: HistoryStore
         let dbPath = dir.appendingPathComponent("history.sqlite").path
         var warning: String?
-        if let s = try? HistoryStore(path: dbPath, redactingHome: home) { store = s }
-        else if let archived = Self.archiveCorruptDatabase(dbPath), let s = try? HistoryStore(path: dbPath, redactingHome: home) {
+        if let s = try? HistoryStore(path: dbPath, redactingHome: home) { store = s }   // try? świadomie: nieudane otwarcie ⇒ niżej archiwum uszkodzonej bazy albo baza w pamięci z ostrzeżeniem
+        else if let archived = Self.archiveCorruptDatabase(dbPath), let s = try? HistoryStore(path: dbPath, redactingHome: home) {   // try? świadomie: nieudane otwarcie ⇒ niżej archiwum uszkodzonej bazy albo baza w pamięci z ostrzeżeniem
             // P2-7 (AUD-STAB-1): uszkodzony plik NIE jest kasowany – zostaje obok pod nową nazwą, a aplikacja zakłada nową, trwałą bazę
             store = s
             warning = String(localized: "Baza historii była uszkodzona. Zachowałem ją jako „\(archived)” w katalogu danych MacCare i założyłem nową – wcześniejsza historia i ustawienia nie są widoczne.")
@@ -422,7 +424,7 @@ final class AppModel: ObservableObject {
                 if n % 5 == 0 { await self.refreshFindings() }
                 n += 1
                 let interval = self.liveInterval
-                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))   // try? świadomie: anulowanie zadania przerywa czekanie – oczekiwane
             }
         }
     }
@@ -432,14 +434,8 @@ final class AppModel: ObservableObject {
     // MARK: Panel
     func refreshLive() async {
         let s = await provider.snapshot()
-        snapshot = s
-        assessment = HealthAssessment.assess(s)
-        evidenceByID = Dictionary((await provider.evidence()).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-        if let c = s.cpu { push(&cpuLive, c.totalPercent) }
-        if let m = s.memory, m.total > 0 { push(&memLive, Double(m.used) / Double(m.total) * 100) }
+        live.update(snapshot: s, evidence: await provider.evidence())
     }
-
-    private func push(_ a: inout [Double], _ v: Double) { a.append(v); if a.count > 90 { a.removeFirst(a.count - 90) } }
 
     func refreshFindings() async {
         findings = await provider.findings()
@@ -521,7 +517,7 @@ final class AppModel: ObservableObject {
         setPhase(.performance, .scanning)
         moduleStage[.performance] = String(localized: "Mierzę obciążenie procesora, pamięci i baterii…")
         await refreshLive()
-        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        try? await Task.sleep(nanoseconds: 1_500_000_000)   // try? świadomie: anulowanie zadania przerywa czekanie – oczekiwane
         await refreshLive(); await refreshFindings()
         moduleStage[.performance] = nil
         setPhase(.performance, .result)
@@ -660,7 +656,7 @@ final class AppModel: ObservableObject {
         let tool = p.call.name
         switch outcome {
         case .completed(let r):
-            try? await Task.sleep(nanoseconds: 1_200_000_000)          // chwila na odświeżenie liczników wolumenu
+            try? await Task.sleep(nanoseconds: 1_200_000_000)          // chwila na odświeżenie liczników wolumenu   // try? świadomie: anulowanie zadania przerywa czekanie – oczekiwane
             let delta: Int64? = before.flatMap { b in freeSpace().map { $0 - b } }
             let note = Self.measurementNote(tool: tool)
             // Do sumy „odzyskanego miejsca” trafia pomiar tylko z operacji, które FAKTYCZNIE zwalniają miejsce. Przeniesienie do
@@ -716,7 +712,7 @@ final class AppModel: ObservableObject {
 
     /// Wolne miejsce faktycznie dostępne na wolumenie katalogu domowego (bez purgeable).
     func freeSpace() -> Int64? {
-        (try? URL(fileURLWithPath: home).resourceValues(forKeys: [.volumeAvailableCapacityKey]))?.volumeAvailableCapacity.map { Int64($0) }
+        (try? URL(fileURLWithPath: home).resourceValues(forKeys: [.volumeAvailableCapacityKey]))?.volumeAvailableCapacity.map { Int64($0) }   // try? świadomie: brak wartości ⇒ nieznane
     }
 
     // MARK: Historia i kwarantanna
@@ -740,7 +736,7 @@ final class AppModel: ObservableObject {
         let free = freeSpace(), s = snapshot
         let dir = dataDir.appendingPathComponent("bench", isDirectory: true)
         let (cpu, files) = await Task.detached(priority: .utility) {
-            ((0..<3).map { _ in MicroBenchmark.cpuWorkMs() }, (0..<3).map { _ in MicroBenchmark.smallFileOpsMs(in: dir) })
+            ((0..<3).map { _ in MicroBenchmark.cpuWorkMs() }, (0..<3).compactMap { _ in MicroBenchmark.smallFileOpsMs(in: dir) })
         }.value
         var samples: [BenchmarkMetric: [Double]] = [.cpuWorkMs: cpu, .smallFileOpsMs: files]
         if let free { samples[.diskFreeBytes] = [Double(free)] }

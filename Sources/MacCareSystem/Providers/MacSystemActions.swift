@@ -65,12 +65,12 @@ public struct MacSystemActions: SystemActions {
     /// Plist musi leżeć bezpośrednio w katalogu agentów użytkownika, być zwykłym plikiem (nie dowiązaniem) i mieć zgodny Label.
     func findPlist(label: String) -> String? {
         let dirCanonical = PathTools.canonical(launchAgentsDirectory)
-        for f in ((try? FileManager.default.contentsOfDirectory(atPath: launchAgentsDirectory)) ?? []).filter({ $0.hasSuffix(".plist") }).sorted() {
+        for f in ((try? FileManager.default.contentsOfDirectory(atPath: launchAgentsDirectory)) ?? []).filter({ $0.hasSuffix(".plist") }).sorted() {   // try? świadomie: nieczytelny katalog ⇒ brak wpisów (tylko odczyt)
             let path = launchAgentsDirectory + "/" + f
             guard let st = FileStat.of(path), st.isRegular, !st.isSymlink,
                   PathTools.canonical((path as NSString).deletingLastPathComponent) == dirCanonical,
                   let data = FileManager.default.contents(atPath: path),
-                  let obj = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+                  let obj = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
                   (obj["Label"] as? String) == label else { continue }
             return path
         }

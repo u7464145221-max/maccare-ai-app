@@ -53,7 +53,7 @@ final class AssistantStore: ObservableObject {
     @Published private(set) var installedModels: [OllamaProvider.ModelInfo] = []
 
     func loadInstalledModels() async {
-        installedModels = ((try? await OllamaProvider().listModelInfos()) ?? []).filter { !$0.name.lowercased().contains("embed") }
+        installedModels = ((try? await OllamaProvider().listModelInfos()) ?? []).filter { !$0.name.lowercased().contains("embed") }   // try? świadomie: Ollama niedostępna ⇒ pusta lista, status pokazuje przyczynę
     }
 
     /// Czy model zmieści się teraz w pamięci (opis do Ustawień).
@@ -127,7 +127,7 @@ final class AssistantStore: ObservableObject {
     nonisolated static func localProvider(memory: MemoryStats?, preferred: String? = nil) async -> AssistantProviderPick {
         let g = memory.map(ResourceGuard.init(memory:)) ?? ResourceGuard()
         let base = OllamaProvider()
-        if let infos = try? await base.listModelInfos() {
+        if let infos = try? await base.listModelInfos() {   // try? świadomie: Ollama niedostępna ⇒ pusta lista, status pokazuje przyczynę
             // model wybrany w Ustawieniach – tylko jeśli zainstalowany i mieści się teraz w pamięci
             if let name = preferred, let m = infos.first(where: { $0.name == name }) {
                 if case .unavailable(let why) = g.canRun(modelBytes: m.sizeBytes + m.sizeBytes / 4) {

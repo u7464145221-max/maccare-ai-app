@@ -57,7 +57,7 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
                 guard let self else { return }
                 await self.tick()
                 let interval = await self.sampleInterval
-                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))   // try? świadomie: anulowanie zadania przerywa czekanie – oczekiwane
             }
         }
     }
@@ -102,7 +102,10 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
         let home = settings.home
         let s = await StartupCollector(home: home).collect()
         let sec = await SecurityCollector().collect()
-        let cr = await Task.detached(priority: .utility) { CrashReportCollector(directory: home + "/Library/Logs/DiagnosticReports", home: home).summaries() }.value
+        let cr = await Task.detached(priority: .utility) { () -> [CrashReportSummary]? in
+            let c = CrashReportCollector(directory: home + "/Library/Logs/DiagnosticReports", home: home)
+            return c.directoryUnreadable() ? nil : c.summaries()                           // nieczytelny katalog = nieznane, nie „0 awarii”
+        }.value
         let snaps = await LocalSnapshotCollector.collect()
         let upd = await Task.detached(priority: .utility) { SoftwareUpdateStatus.read() }.value       // P2-10: tylko odczyt plistu, bez sieci
         startup = s; security = sec; crashes = cr; localSnapshots = snaps; updates = upd
@@ -149,7 +152,7 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
             // Świeży kolektor nie ma jeszcze interwału do liczenia delt (CPU = nil) – krótko czekamy i próbkujemy ponownie,
             // żeby reguły i dowody (np. cpu.total) nie odwoływały się do nieistniejącego pomiaru.
             if latest?.cpu == nil {
-                try? await Task.sleep(nanoseconds: 350_000_000)
+                try? await Task.sleep(nanoseconds: 350_000_000)   // try? świadomie: anulowanie zadania przerywa czekanie – oczekiwane
                 await tick()
             }
         }

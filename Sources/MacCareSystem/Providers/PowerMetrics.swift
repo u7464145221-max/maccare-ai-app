@@ -61,7 +61,7 @@ enum PowerMetricsParser {
         guard let start = text.range(of: "<?xml"), let end = text.range(of: "</plist>", options: .backwards), start.lowerBound < end.upperBound else { return nil }
         text = String(text[start.lowerBound..<end.upperBound])
         guard let data = text.data(using: .utf8),
-              let any = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil), let root = any as? [String: Any] else { return nil }
+              let any = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil), let root = any as? [String: Any] else { return nil }   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
 
         let elapsedS = number("elapsed_ns", in: root).map { $0 / 1e9 }
         func power(_ k: String) -> Double? {

@@ -55,8 +55,15 @@ public struct TrashSelectedTool: AgentTool {
     public static func defaultCloudProbe(home: String) -> @Sendable (String) -> Bool {
         return { path in
             PathPolicy.isCloudLocation(path, home: home)
-                || ((try? URL(fileURLWithPath: path).resourceValues(forKeys: [.isUbiquitousItemKey]))?.isUbiquitousItem ?? false)
+                || Self.ubiquitousOrUnknown(path)
         }
+    }
+
+    /// Audyt 16.10: odczyt metadanych NIEUDANY ⇒ traktujemy jak chmurę (usunięcie pliku iCloud kasuje go na wszystkich urządzeniach – bezpieczniej wymagać
+    /// świadomego dołączenia). Brak wartości `isUbiquitousItem` (zwykły plik spoza iCloud – system zwraca wtedy nil) ⇒ nie chmura.
+    static func ubiquitousOrUnknown(_ path: String) -> Bool {
+        do { return try URL(fileURLWithPath: path).resourceValues(forKeys: [.isUbiquitousItemKey]).isUbiquitousItem ?? false }
+        catch { return true }
     }
 
     public var userOnly: Bool { true }

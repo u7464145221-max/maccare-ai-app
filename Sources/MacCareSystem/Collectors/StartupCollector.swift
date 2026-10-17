@@ -41,11 +41,11 @@ public struct StartupCollector: Sendable {
     public func collect(checkSignatures: Bool = true, checkLoaded: Bool = true) async -> [StartupItem] {
         var items: [StartupItem] = []
         for d in directories {
-            let files = ((try? FileManager.default.contentsOfDirectory(atPath: d.path)) ?? []).filter { $0.hasSuffix(".plist") }.sorted()
+            let files = ((try? FileManager.default.contentsOfDirectory(atPath: d.path)) ?? []).filter { $0.hasSuffix(".plist") }.sorted()   // try? świadomie: nieczytelny katalog ⇒ brak wpisów (tylko odczyt)
             for f in files {
                 let path = d.path + "/" + f
                 guard let data = FileManager.default.contents(atPath: path),
-                      let obj = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+                      let obj = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
                       let item = Self.parse(plist: obj, path: path, scope: d.scope) else { continue }
                 items.append(item)
             }

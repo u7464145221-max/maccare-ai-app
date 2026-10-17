@@ -17,7 +17,7 @@ final class EditSessionMonitor {
         }
         task = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))   // try? świadomie: anulowanie zadania przerywa czekanie – oczekiwane
                 if Task.isCancelled { return }
                 if state.mode == .readOnly { self?.stop(); return }               // odczyt `mode` wygasza przeterminowaną Edycję i powiadamia obserwatorów
             }

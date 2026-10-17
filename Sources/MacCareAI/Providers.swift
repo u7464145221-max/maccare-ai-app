@@ -76,7 +76,7 @@ public struct OllamaProvider: LLMProvider {
     }
 
     public static func parseModelInfos(_ data: Data) -> [ModelInfo] {
-        guard let v = try? JSONValue.parse(String(decoding: data, as: UTF8.self)) else { return [] }
+        guard let v = try? JSONValue.parse(String(decoding: data, as: UTF8.self)) else { return [] }   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
         return v["models"]?.arrayValue?.compactMap { m in
             guard let name = m["name"]?.stringValue, !isRemoteModelName(name),
                   (m["remote_host"]?.stringValue ?? "").isEmpty, (m["remote_model"]?.stringValue ?? "").isEmpty else { return nil }   // model w chmurze – pomijany

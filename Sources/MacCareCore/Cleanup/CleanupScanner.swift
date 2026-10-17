@@ -85,7 +85,7 @@ public struct CleanupScanner: Sendable {
                 case .whole:
                     targets = [root]
                 case .children, .childrenWithExtensions, .childrenNamed:
-                    guard let kids = try? fm.contentsOfDirectory(atPath: root) else { unreadable.append(root); continue }
+                    guard let kids = try? fm.contentsOfDirectory(atPath: root) else { unreadable.append(root); continue }   // try? świadomie: nieczytelny katalog ⇒ brak wpisów (tylko odczyt)
                     for k in kids where k != ".DS_Store" && k != ".localized" {
                         if rule.excludeNames.contains(k) { continue }
                         if k.hasPrefix("com.apple.") && rule.owner != "macOS" { continue }

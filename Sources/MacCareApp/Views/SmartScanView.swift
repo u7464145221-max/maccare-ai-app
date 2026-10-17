@@ -3,6 +3,7 @@ import MacCareCore
 
 /// Smart Scan: ekran główny. Start = „Stan Maca” (bohater + rekomendacje z reguł), skanowanie = animowany przycisk, wynik = kafle 3 + 2.
 struct SmartScanView: View {
+    @EnvironmentObject private var live: LiveMetrics                                // dane na żywo – przeliczanie tylko tego widoku
     @EnvironmentObject var model: AppModel
     @State private var showAll = false
 
@@ -145,11 +146,12 @@ struct InfoButton: View {
     var body: some View {
         Button { shown.toggle() } label: { Image(systemName: "info.circle").font(.system(size: 16)).foregroundStyle(Theme.Palette.textSecondary).frame(width: 32, height: 32).contentShape(Rectangle()) }.accessibilityLabel("Więcej informacji")
             .buttonStyle(.plain).help("Z czego wynika ocena")
-            .popover(isPresented: $shown, arrowEdge: .bottom) { AssessmentPopover().environmentObject(model) }
+            .popover(isPresented: $shown, arrowEdge: .bottom) { AssessmentPopover().environmentObject(model).environmentObject(model.live) }
     }
 }
 
 struct AssessmentPopover: View {
+    @EnvironmentObject private var live: LiveMetrics                                // dane na żywo – przeliczanie tylko tego widoku
     @EnvironmentObject var model: AppModel
     var body: some View {
         ScrollView {

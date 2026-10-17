@@ -27,7 +27,7 @@ public struct CrashReportCollector: Sendable {
     }
 
     static func parseHeader(firstLine: Data) -> Header? {
-        guard let o = try? JSONSerialization.jsonObject(with: firstLine) as? [String: Any],
+        guard let o = try? JSONSerialization.jsonObject(with: firstLine) as? [String: Any],   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
               let app = (o["app_name"] as? String) ?? (o["name"] as? String) else { return nil }
         return Header(app: app, name: o["name"] as? String, bugType: o["bug_type"] as? String,
                       date: (o["timestamp"] as? String).flatMap(parseDate), version: o["app_version"] as? String)
@@ -50,15 +50,15 @@ public struct CrashReportCollector: Sendable {
 
     private func entries(since: Date) -> [Entry] {
         let fm = FileManager.default
-        let files = (try? fm.contentsOfDirectory(atPath: directory)) ?? []
+        let files = (try? fm.contentsOfDirectory(atPath: directory)) ?? []           // try? świadomie: nieczytelność zgłasza `directoryUnreadable()` (migawka: nieznane)
         var out: [Entry] = []
         for f in files where [".ips", ".diag", ".hang", ".spin", ".crash"].contains(where: { f.hasSuffix($0) }) {
             let path = directory + "/" + f
-            guard let attrs = try? fm.attributesOfItem(atPath: path), let mtime = attrs[.modificationDate] as? Date else { continue }
+            guard let attrs = try? fm.attributesOfItem(atPath: path), let mtime = attrs[.modificationDate] as? Date else { continue }   // try? świadomie: brak wartości ⇒ nieznane
             var header: Header?
             if f.hasSuffix(".ips"), let h = FileHandle(forReadingAtPath: path) {
-                defer { try? h.close() }
-                let chunk = (try? h.read(upToCount: 8192)) ?? Data()
+                defer { try? h.close() }   // try? świadomie: zamknięcie uchwytu tylko do odczytu
+                let chunk = (try? h.read(upToCount: 8192)) ?? Data()   // try? świadomie: nieudany odczyt ⇒ brak danych
                 if let nl = chunk.firstIndex(of: 0x0A) { header = Self.parseHeader(firstLine: chunk[..<nl]) }
             }
             let h = header ?? Header(app: Self.processName(fromFile: f), name: nil, bugType: nil, date: nil, version: nil)
@@ -74,6 +74,13 @@ public struct CrashReportCollector: Sendable {
         if let r = base.range(of: "-20\\d\\d-\\d\\d-\\d\\d", options: .regularExpression) { base = String(base[..<r.lowerBound]) }
         if let u = base.firstIndex(of: "_") { base = String(base[..<u]) }
         return base
+    }
+
+    /// Audyt 16.10 (`try?`): katalog istnieje, ale nie da się go odczytać ⇒ wynik NIEZNANY (nil w migawce), a nie „0 awarii”. Brak katalogu = brak raportów.
+    public func directoryUnreadable() -> Bool {
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: directory, isDirectory: &isDir), isDir.boolValue else { return false }
+        return (try? FileManager.default.contentsOfDirectory(atPath: directory)) == nil   // try? świadomie: tu właśnie sprawdzamy, czy odczyt się udaje
     }
 
     /// Grupowanie z ostatnich `days` dni.
@@ -98,9 +105,9 @@ public struct CrashReportCollector: Sendable {
         guard let e = candidates.first else { return nil }
         let path = directory + "/" + e.file
         guard e.file.hasSuffix(".ips"),
-              let size = (try? FileManager.default.attributesOfItem(atPath: path))?[.size] as? Int, size <= Self.maxFileBytes,
+              let size = (try? FileManager.default.attributesOfItem(atPath: path))?[.size] as? Int, size <= Self.maxFileBytes,   // try? świadomie: brak wartości ⇒ nieznane
               let data = FileManager.default.contents(atPath: path), let nl = data.firstIndex(of: 0x0A),
-              let body = try? JSONSerialization.jsonObject(with: data[data.index(after: nl)...]) as? [String: Any] else {
+              let body = try? JSONSerialization.jsonObject(with: data[data.index(after: nl)...]) as? [String: Any] else {   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
             return Self.truncate(String(localized: "Raport \(e.kind) procesu \(e.header.app) z \(e.date.formatted(date: .abbreviated, time: .shortened)) (bez szczegółów – nieobsługiwany format)."))
         }
         return Self.truncate(Self.describe(header: e.header, date: e.date, body: body).replacingOccurrences(of: home, with: "~"))

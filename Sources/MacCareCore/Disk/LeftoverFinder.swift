@@ -72,7 +72,7 @@ public enum LeftoverFinder {
         var out: [AppLeftover] = []
         for (rel, label) in locations {
             let dir = home + "/" + rel
-            for name in (try? fm.contentsOfDirectory(atPath: dir)) ?? [] {
+            for name in (try? fm.contentsOfDirectory(atPath: dir)) ?? [] {   // try? świadomie: nieczytelny katalog ⇒ brak wpisów (tylko odczyt)
                 guard let id = bundleID(fromEntryName: name), !isOwned(id, installed: installedBundleIDs) else { continue }
                 let p = dir + "/" + name
                 guard let st = FileStat.of(p), !st.isSymlink else { continue }

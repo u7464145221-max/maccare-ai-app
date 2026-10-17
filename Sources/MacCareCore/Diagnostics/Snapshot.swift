@@ -419,7 +419,7 @@ public struct SoftwareUpdateStatus: Codable, Sendable, Equatable {
 
     public static func read(path: String = defaultPath) -> SoftwareUpdateStatus? {
         guard let d = FileManager.default.contents(atPath: path),
-              let p = try? PropertyListSerialization.propertyList(from: d, format: nil) as? [String: Any] else { return nil }
+              let p = try? PropertyListSerialization.propertyList(from: d, format: nil) as? [String: Any] else { return nil }   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
         return parse(plist: p)
     }
 }

@@ -66,10 +66,10 @@ public enum JSONValue: Codable, Equatable, Sendable, CustomStringConvertible {
     public init(from decoder: Decoder) throws {
         let c = try decoder.singleValueContainer()
         if c.decodeNil() { self = .null }
-        else if let b = try? c.decode(Bool.self) { self = .bool(b) }
-        else if let n = try? c.decode(Double.self) { self = .number(n) }
-        else if let s = try? c.decode(String.self) { self = .string(s) }
-        else if let a = try? c.decode([JSONValue].self) { self = .array(a) }
+        else if let b = try? c.decode(Bool.self) { self = .bool(b) }   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
+        else if let n = try? c.decode(Double.self) { self = .number(n) }   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
+        else if let s = try? c.decode(String.self) { self = .string(s) }   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
+        else if let a = try? c.decode([JSONValue].self) { self = .array(a) }   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
         else { self = .object(try c.decode([String: JSONValue].self)) }
     }
     public func encode(to encoder: Encoder) throws {
@@ -95,7 +95,7 @@ public enum JSONValue: Codable, Equatable, Sendable, CustomStringConvertible {
     }
     public var jsonString: String {
         let e = JSONEncoder(); e.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        return (try? String(decoding: e.encode(self), as: UTF8.self)) ?? "null"
+        return (try? String(decoding: e.encode(self), as: UTF8.self)) ?? "null"   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
     }
     public var description: String { jsonString }
 }
@@ -119,7 +119,7 @@ public struct AppPaths: Sendable {
     public var reports: URL { support.appendingPathComponent("Reports", isDirectory: true) }
     public init(support: URL) {
         self.support = support
-        try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)   // try? świadomie: brak katalogu ⇒ kolejny zapis sam zgłosi błąd
     }
     public static var standard: AppPaths {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first

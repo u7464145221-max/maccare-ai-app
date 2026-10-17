@@ -36,7 +36,7 @@ struct MacCareApp: App {
 
         // P2-10 etap 2: stan Maca w pasku menu (tylko odczyt). Ikona = kolor stanu nie jest dostępny w pasku, więc symbol zmienia się z oceną.
         MenuBarExtra(isInserted: $showMenuBar) {
-            MenuBarView().environmentObject(model)
+            MenuBarView().environmentObject(model).environmentObject(model.live)
         } label: {
             Image(systemName: model.menuBarSymbol)
         }

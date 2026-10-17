@@ -3,6 +3,7 @@ import MacCareCore
 
 /// Porządki: start → skanowanie → wynik (siatka „bento” kategorii) → widok szczegółów (lista kategorii + lista elementów).
 struct CleanupView: View {
+    @EnvironmentObject private var live: LiveMetrics                                // dane na żywo – przeliczanie tylko tego widoku
     @EnvironmentObject var model: AppModel
 
     var body: some View {
@@ -201,6 +202,7 @@ struct CleanupDetail: View {
 }
 
 struct CleanupItemRow: View {
+    @EnvironmentObject private var live: LiveMetrics                                // dane na żywo – przeliczanie tylko tego widoku
     @EnvironmentObject var model: AppModel
     let candidate: CleanupCandidate
 

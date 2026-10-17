@@ -27,6 +27,7 @@ struct RootView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: model.module)
         .environment(\.viewMode, model.viewMode)
+        .environmentObject(model.live)                                                     // dane na żywo dla widoków, które je pokazują
         .sheet(isPresented: $model.sensorConsentPresented) { SensorConsentSheet().environmentObject(model) }
         .sheet(isPresented: $model.editConfirmPresented) { EditModeSheet().environmentObject(model) }
         .sheet(item: $model.sheet, onDismiss: { Task { await model.dismissSheet() } }) { c in ApprovalSheet(content: c) }

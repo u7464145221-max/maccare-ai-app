@@ -88,7 +88,7 @@ enum AgentProtocol {
 
     /// Wyciąga pierwszy kompletny obiekt JSON z odpowiedzi (modele bywają „gadatliwe” lub dodają ```json).
     static func parse(_ text: String) -> Step? {
-        guard let obj = firstJSONObject(in: text), let v = try? JSONValue.parse(obj) else { return nil }
+        guard let obj = firstJSONObject(in: text), let v = try? JSONValue.parse(obj) else { return nil }   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
         switch v["type"]?.stringValue {
         case "tool_call":
             guard let name = v["tool"]?.stringValue else { return nil }
@@ -178,7 +178,7 @@ struct Quantity: Equatable {
     }
 
     static func all(in s: String) -> [Quantity] {
-        guard let re = try? NSRegularExpression(pattern: #"(\d+(?:[.,]\d+)?)\s*(TB|GB|MB|KB|TiB|GiB|MiB|KiB|kB|B|%|°C|°|ms|min|s|h)(?![A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż])"#) else { return [] }
+        guard let re = try? NSRegularExpression(pattern: #"(\d+(?:[.,]\d+)?)\s*(TB|GB|MB|KB|TiB|GiB|MiB|KiB|kB|B|%|°C|°|ms|min|s|h)(?![A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż])"#) else { return [] }   // try? świadomie: stały wzorzec – błąd niemożliwy
         return re.matches(in: s, range: NSRange(s.startIndex..., in: s)).compactMap { m in
             guard let rn = Range(m.range(at: 1), in: s), let ru = Range(m.range(at: 2), in: s), let r0 = Range(m.range, in: s),
                   let n = Double(s[rn].replacingOccurrences(of: ",", with: ".")), let unit = Unit(String(s[ru])) else { return nil }

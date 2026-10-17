@@ -80,8 +80,8 @@ enum DiskMapPersistence {
     static var decoder: JSONDecoder { let d = JSONDecoder(); d.dateDecodingStrategy = .secondsSince1970; return d }
 
     static func decode(_ data: Data, home: String) -> [Entry]? {
-        guard data.count <= maxCompressedBytes, let json = try? (data as NSData).decompressed(using: .lzfse) as Data,
-              json.count <= maxJSONBytes, let file = try? decoder.decode(File.self, from: json), file.version == version else { return nil }
+        guard data.count <= maxCompressedBytes, let json = try? (data as NSData).decompressed(using: .lzfse) as Data,   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
+              json.count <= maxJSONBytes, let file = try? decoder.decode(File.self, from: json), file.version == version else { return nil }   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
         return file.listings.compactMap { l -> Entry? in
             let dir = expand(l.dir, home: home)
             guard isSafeAbsolute(dir), l.nodes.count <= 100_000 else { return nil }

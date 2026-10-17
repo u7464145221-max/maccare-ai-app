@@ -96,7 +96,7 @@ public enum CommandRunner {
                 // Odczyt porcjami z limitem: po przekroczeniu proces jest zatrzymywany, a wynik oznaczony jako niepełny (`truncated`).
                 var data = Data(), truncated = false
                 let reader = out.fileHandleForReading
-                while let chunk = try? reader.read(upToCount: 64 * 1024), !chunk.isEmpty {
+                while let chunk = try? reader.read(upToCount: 64 * 1024), !chunk.isEmpty {   // try? świadomie: nieudany odczyt ⇒ brak danych
                     if data.count + chunk.count > maxOutputBytes {
                         data.append(chunk.prefix(max(0, maxOutputBytes - data.count)))
                         truncated = true

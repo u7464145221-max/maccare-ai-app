@@ -4,6 +4,7 @@ import MacCareCore
 /// Ochrona: stan zabezpieczeń systemu, audyt autostartu, podpisy programów, porty nasłuchujące, raporty awarii.
 /// Tylko odczyt i dowody – MacCare niczego nie wyłącza ani nie włącza.
 struct ProtectionView: View {
+    @EnvironmentObject private var live: LiveMetrics                                // dane na żywo – przeliczanie tylko tego widoku
     @EnvironmentObject var model: AppModel
     @State private var tab = Tab.overview
     enum Tab: String, CaseIterable { case overview = "Przegląd", startup = "Autostart", ports = "Porty", crashes = "Awarie" }

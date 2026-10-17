@@ -42,6 +42,7 @@ extension SimplePresentation.Status {
 }
 
 struct SimpleHome: View {
+    @EnvironmentObject private var live: LiveMetrics                                // dane na żywo – przeliczanie tylko tego widoku
     @EnvironmentObject var model: AppModel
 
     var body: some View {

@@ -3,6 +3,7 @@ import MacCareCore
 
 /// Pasek menu (P2-10 etap 2): stan Maca w skrócie i skróty. Tylko odczyt – nic tu nie zmienia systemu.
 struct MenuBarView: View {
+    @EnvironmentObject private var live: LiveMetrics                                // dane na żywo – przeliczanie tylko tego widoku
     @EnvironmentObject var model: AppModel
     @Environment(\.openWindow) private var openWindow
 

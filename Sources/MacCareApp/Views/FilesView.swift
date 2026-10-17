@@ -517,6 +517,7 @@ struct IncompleteScanBar: View {
 }
 
 struct MapSection: View {
+    @EnvironmentObject private var live: LiveMetrics                                // dane na żywo – przeliczanie tylko tego widoku
     @ObservedObject var map: DiskMapStore
     @ObservedObject var model: AppModel
     /// Osobny przełącznik „Także pliki w chmurze” (domyślnie wyłączony – pliki w chmurze są wtedy pomijane).

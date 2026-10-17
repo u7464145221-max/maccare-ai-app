@@ -164,7 +164,7 @@ public enum DiskAnalyzer {
     }
 
     private static func build(_ node: DirectoryNode, depth: Int, maxDepth: Int, deadline: Date?, seen: inout Set<FileID>) {
-        guard let kids = try? FileManager.default.contentsOfDirectory(atPath: node.path) else { return }
+        guard let kids = try? FileManager.default.contentsOfDirectory(atPath: node.path) else { return }   // try? świadomie: nieczytelny katalog ⇒ brak wpisów (tylko odczyt)
         for k in kids {
             if let d = deadline, Date() > d { break }
             let p = node.path + "/" + k
@@ -265,7 +265,7 @@ public enum DuplicateFinder {
 
     static func partialHash(_ path: String, size: UInt64) -> String? {
         guard let h = FileHandle(forReadingAtPath: path) else { return nil }
-        defer { try? h.close() }
+        defer { try? h.close() }   // try? świadomie: zamknięcie uchwytu tylko do odczytu
         let chunk = 65_536
         var data = h.readData(ofLength: chunk)
         if size > UInt64(chunk * 2) { h.seek(toFileOffset: size - UInt64(chunk)); data.append(h.readData(ofLength: chunk)) }
@@ -274,7 +274,7 @@ public enum DuplicateFinder {
 
     static func fullHash(_ path: String) -> String? {
         guard let h = FileHandle(forReadingAtPath: path) else { return nil }
-        defer { try? h.close() }
+        defer { try? h.close() }   // try? świadomie: zamknięcie uchwytu tylko do odczytu
         var hasher = SHA256Digest()
         while true {
             let d = h.readData(ofLength: 1 << 20)

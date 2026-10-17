@@ -44,7 +44,7 @@ public enum AppData {
         let fm = FileManager.default
         for loc in locations {
             let dir = home + "/" + loc.rel
-            guard let names = try? fm.contentsOfDirectory(atPath: dir) else { continue }
+            guard let names = try? fm.contentsOfDirectory(atPath: dir) else { continue }   // try? świadomie: nieczytelny katalog ⇒ brak wpisów (tylko odczyt)
             for n in names {
                 guard let a = association(entryName: n, appBundleID: appBundleID) else { continue }
                 let p = dir + "/" + n

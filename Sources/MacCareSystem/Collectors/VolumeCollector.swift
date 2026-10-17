@@ -10,7 +10,7 @@ enum VolumeCollector {
         let urls = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: keys, options: [.skipHiddenVolumes]) ?? []
         var out: [VolumeStats] = []
         for u in urls {
-            guard let v = try? u.resourceValues(forKeys: Set(keys)) else { continue }
+            guard let v = try? u.resourceValues(forKeys: Set(keys)) else { continue }   // try? świadomie: brak wartości ⇒ nieznane
             let path = u.path
             let isRoot = path == "/"
             guard isRoot || (v.volumeIsLocal == true && v.volumeIsInternal == true && !path.hasPrefix("/System/Volumes")) else { continue }

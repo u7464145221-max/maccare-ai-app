@@ -148,7 +148,7 @@ final class DiskMapStore: ObservableObject {
     init(root: String, maxListings: Int = 200, maxCachedNodes: Int = 20_000, persistenceURL: URL? = nil, home: String = NSHomeDirectory()) {
         rootPath = root; path = [root]; self.maxListings = maxListings; self.maxCachedNodes = maxCachedNodes
         self.persistenceURL = persistenceURL; self.home = home
-        if let url = persistenceURL, let data = try? Data(contentsOf: url), let entries = DiskMapPersistence.decode(data, home: home) {
+        if let url = persistenceURL, let data = try? Data(contentsOf: url), let entries = DiskMapPersistence.decode(data, home: home) {   // try? świadomie: brak lub uszkodzona pamięć mapy ⇒ zwykły skan
             for e in entries.sorted(by: { $0.measuredAt < $1.measuredAt }).suffix(maxListings) {
                 cache[e.dir] = Listing(nodes: e.nodes, measuredAt: e.measuredAt, dirMTime: e.dirMTime, inaccessible: e.inaccessible, unreadableInside: e.unreadableInside,
                                        checkpoint: e.checkpoint, unreadableByChild: e.unreadableByChild, previousSizes: e.previousSizes, previousAt: e.previousAt)
@@ -165,7 +165,7 @@ final class DiskMapStore: ObservableObject {
         saveGeneration += 1
         let gen = saveGeneration
         Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            try? await Task.sleep(nanoseconds: 2_000_000_000)   // try? świadomie: anulowanie zadania przerywa czekanie – oczekiwane
             guard let self, gen == self.saveGeneration else { return }
             await self.saveNow()
         }
@@ -180,8 +180,8 @@ final class DiskMapStore: ObservableObject {
                                                                                   previousSizes: $0.previousSizes, previousAt: $0.previousAt) } }
         let home = self.home
         await Task.detached(priority: .utility) {
-            guard let data = try? DiskMapPersistence.encode(entries, home: home) else { return }
-            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            guard let data = try? DiskMapPersistence.encode(entries, home: home) else { return }   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
+            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)   // try? świadomie: brak katalogu ⇒ kolejny zapis sam zgłosi błąd
             try? data.write(to: url, options: .atomic)                                  // try? świadomie: pamięć wyników to tylko przyspieszenie – brak zapisu = skan przy następnym starcie
         }.value
     }
@@ -364,7 +364,7 @@ final class DiskMapStore: ObservableObject {
         // Wspólny rejestr dowiązań: plik z dowiązaniem w dwóch dzieciach liczy się raz (F6).
         let stream = AsyncStream<ScanEvent> { cont in
             DispatchQueue.global(qos: .utility).async {
-                let present = (try? FileManager.default.contentsOfDirectory(atPath: dir)) ?? []
+                let present = (try? FileManager.default.contentsOfDirectory(atPath: dir)) ?? []   // try? świadomie: nieczytelny katalog ⇒ brak wpisów (tylko odczyt)
                 var todo: [(name: String, stat: FileStat?)] = []
                 for k in present {
                     let st = FileStat.of(dir + "/" + k)

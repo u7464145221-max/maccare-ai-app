@@ -94,7 +94,7 @@ public enum AppInventory {
     }
 
     public static func homebrewCasks() -> Set<String> {
-        Set(["/opt/homebrew/Caskroom", "/usr/local/Caskroom"].flatMap { (try? FileManager.default.contentsOfDirectory(atPath: $0)) ?? [] }.map { $0.lowercased() })
+        Set(["/opt/homebrew/Caskroom", "/usr/local/Caskroom"].flatMap { (try? FileManager.default.contentsOfDirectory(atPath: $0)) ?? [] }.map { $0.lowercased() })   // try? świadomie: nieczytelny katalog ⇒ brak wpisów (tylko odczyt)
     }
 
     /// Szczegóły jednej aplikacji (rozmiar, ostatnie użycie, podpis, architektury). Podpis przez serializowaną kolejkę.
@@ -106,7 +106,7 @@ public enum AppInventory {
         let sig = await CodeSignatureChecker.check(path: r.path, deep: false)
         var arch: [String] = []
         if let exe = r.executable, let h = FileHandle(forReadingAtPath: r.path + "/Contents/MacOS/" + exe) {
-            arch = architectures(header: (try? h.read(upToCount: 512)) ?? Data()); try? h.close()
+            arch = architectures(header: (try? h.read(upToCount: 512)) ?? Data()); try? h.close()   // try? świadomie: zamknięcie uchwytu tylko do odczytu
         }
         return InstalledApp(name: r.name, bundleID: r.bundleID, version: r.version, path: r.path, size: size, lastUsed: used,
                             signature: sig.status, source: source(path: r.path, signature: sig.status, casks: casks, name: r.name), architectures: arch)

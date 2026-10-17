@@ -23,13 +23,13 @@ public struct Redactor: Sendable {
         guard level != .full else { return s }
         var t = s
         // e-maile najpierw (zanim nazwa użytkownika zostanie podmieniona wewnątrz adresu)
-        if let re = try? NSRegularExpression(pattern: "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}") {
+        if let re = try? NSRegularExpression(pattern: "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}") {   // try? świadomie: stały wzorzec – błąd niemożliwy
             t = re.stringByReplacingMatches(in: t, range: NSRange(t.startIndex..., in: t), withTemplate: "<email>")
         }
         t = t.replacingOccurrences(of: home, with: "~")
         if userName.count >= 2 { t = t.replacingOccurrences(of: userName, with: "<user>") }
         if hostName.count >= 2 { t = t.replacingOccurrences(of: hostName, with: "<host>") }
-        if level == .minimal, let re = try? NSRegularExpression(pattern: "(~|/)[^\\s,;\\]\\)]+") {
+        if level == .minimal, let re = try? NSRegularExpression(pattern: "(~|/)[^\\s,;\\]\\)]+") {   // try? świadomie: stały wzorzec – błąd niemożliwy
             t = re.stringByReplacingMatches(in: t, range: NSRange(t.startIndex..., in: t), withTemplate: "<ścieżka>")
         }
         return t

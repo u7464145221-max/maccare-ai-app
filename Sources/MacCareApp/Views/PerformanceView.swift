@@ -3,6 +3,7 @@ import MacCareCore
 
 /// Wydajność: najwięksi konsumenci (procesy użytkownika + licznik niemierzalnych), pamięć, swap, bateria, temperatura.
 struct PerformanceView: View {
+    @EnvironmentObject private var live: LiveMetrics                                // dane na żywo – przeliczanie tylko tego widoku
     @EnvironmentObject var model: AppModel
 
     var body: some View {
