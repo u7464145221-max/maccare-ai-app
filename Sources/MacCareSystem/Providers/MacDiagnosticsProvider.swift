@@ -35,6 +35,7 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
     private var startup: [StartupItem]?
     private var security: SecurityPosture?
     private var crashes: [CrashReportSummary]?
+    private var ssd: SSDHealth?
     private var localSnapshots: [Date]?
     private var updates: SoftwareUpdateStatus?
     private var loop: Task<Void, Never>?
@@ -96,7 +97,7 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
             lastEnrich = now
             enrichTask = Task { [weak self] in await self?.runEnrichment() }
         }
-        snap.startupItems = startup; snap.security = security; snap.crashes = crashes; snap.localSnapshots = localSnapshots; snap.updates = updates
+        snap.startupItems = startup; snap.security = security; snap.crashes = crashes; snap.localSnapshots = localSnapshots; snap.updates = updates; snap.ssd = ssd
         latest = snap
         updateWindow(snap, at: now)
         if history != nil, now.timeIntervalSince(lastHistory) >= settings.historyInterval {
@@ -116,8 +117,9 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
         }.value
         async let snaps = LocalSnapshotCollector.collect()
         async let upd = Task.detached(priority: .utility) { SoftwareUpdateStatus.read() }.value       // P2-10: tylko odczyt plistu, bez sieci
-        let (rs, rsec, rcr, rsnaps, rupd) = await (s, sec, cr, snaps, upd)
-        startup = rs; security = rsec; crashes = rcr; localSnapshots = rsnaps; updates = rupd
+        async let disk = Task.detached(priority: .utility) { SSDHealthCollector.read() }.value        // 18.10: SMART NVMe, tylko odczyt
+        let (rs, rsec, rcr, rsnaps, rupd, rssd) = await (s, sec, cr, snaps, upd, disk)
+        startup = rs; security = rsec; crashes = rcr; localSnapshots = rsnaps; updates = rupd; ssd = rssd
         enrichTask = nil
     }
 
@@ -148,7 +150,7 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
 
     private func recordHistory(_ s: SystemSnapshot, at t: Date) {
         history?.recordSamples(Self.historySamples(s), at: t)
-        if t.timeIntervalSince(lastCompaction) >= 6 * 3600 { history?.compactSamples(now: t); lastCompaction = t }
+        if t.timeIntervalSince(lastCompaction) >= 6 * 3600 { history?.compactSamples(now: t); history?.pruneOld(now: t); lastCompaction = t }   // audyt 2 (4.14): retencja
     }
 
     /// Dla testów: bieżące okno metryk.

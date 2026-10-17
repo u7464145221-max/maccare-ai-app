@@ -12,7 +12,7 @@ struct RootView: View {
             HStack(spacing: 0) {
                 SidebarView(collapsed: collapsed)
                     .frame(width: collapsed ? 68 : 232)
-                    .animation(.spring(response: 0.45, dampingFraction: 0.85), value: collapsed)
+                    .animation(Motion.animation(.spring(response: 0.45, dampingFraction: 0.85)), value: collapsed)
                 VStack(spacing: 0) {
                     ReadOnlyBanner()
                     if let warning = model.storageWarning { StorageWarningBar(text: warning) }
@@ -25,9 +25,10 @@ struct RootView: View {
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: model.module)
+        .animation(Motion.animation(.easeInOut(duration: 0.3)), value: model.module)
         .environment(\.viewMode, model.viewMode)
         .environmentObject(model.live)                                                     // dane na żywo dla widoków, które je pokazują
+        .environmentObject(model.live.disk)                                                // audyt 2 (4.5): rzadkie fakty dla dużych list
         .sheet(isPresented: $model.sensorConsentPresented) { SensorConsentSheet().environmentObject(model) }
         .sheet(isPresented: $model.editConfirmPresented) { EditModeSheet().environmentObject(model) }
         .sheet(item: $model.sheet, onDismiss: { Task { await model.dismissSheet() } }) { c in ApprovalSheet(content: c) }
@@ -147,6 +148,6 @@ struct SidebarBackground: View {
             Theme.Palette.sidebar
             ForEach(AppModule.allCases) { m in m.sidebarTint.opacity(m == module ? 1 : 0) }
         }
-        .animation(.easeInOut(duration: 0.4), value: module)
+        .animation(Motion.animation(.easeInOut(duration: 0.4)), value: module)
     }
 }

@@ -130,7 +130,7 @@ public struct RulesEngine: Sendable {
 
     public static let standardRules: [any DiagnosticRule] = [
         LowDiskRule(), LocalSnapshotsRule(), MemoryPressureRule(), SwapRule(), SustainedProcessCPURule(), SystemCPURule(), IdleMemoryHogRule(),
-        ThermalRule(), BatteryHealthRule(), SecurityPostureRule(), ScanAccessRule(), SoftwareUpdatesRule(), StartupItemsRule(), CrashLoopRule(), ZombieRule(), UptimeRule()
+        ThermalRule(), BatteryHealthRule(), SSDHealthRule(), SecurityPostureRule(), ScanAccessRule(), SoftwareUpdatesRule(), StartupItemsRule(), CrashLoopRule(), ZombieRule(), UptimeRule()
     ]
 }
 
@@ -276,6 +276,32 @@ public struct BatteryHealthRule: DiagnosticRule {
             out.append(Finding(id: "\(id).capacity", ruleID: id, category: .battery, title: String(localized: "Pojemność baterii spadła do \(Int(h))%"),
                                detail: String(localized: "Maksymalna pojemność względem projektowej. Krótszy czas pracy na baterii jest tu oczekiwany."),
                                severity: .info, certainty: .confirmed, evidenceIDs: ["bat.health"] + (b.cycleCount != nil ? ["bat.cycles"] : [])))
+        }
+        return out
+    }
+}
+
+/// 18.10 (decyzja właściciela): kondycja dysku SSD z dziennika SMART – ostrzeżenie sprzętowe, zapas poniżej progu, błędy nośnika, wysokie zużycie.
+public struct SSDHealthRule: DiagnosticRule {
+    public let id = "storage.ssd"
+    public init() {}
+    public func evaluate(_ s: SystemSnapshot, _ ctx: RuleContext) -> [Finding] {
+        guard let d = s.ssd else { return [] }
+        var out: [Finding] = []
+        if d.criticalWarning != 0 || d.availableSpare < d.availableSpareThreshold {
+            out.append(Finding(id: "\(id).critical", ruleID: id, category: .storage, title: String(localized: "Dysk SSD zgłasza ostrzeżenie sprzętowe"),
+                               detail: String(localized: "Zrób kopię zapasową (Time Machine) i skontaktuj się z serwisem Apple. Zapas komórek: \(d.availableSpare)% (próg \(d.availableSpareThreshold)%)."),
+                               severity: .critical, certainty: .confirmed, evidenceIDs: ["ssd.warning", "ssd.spare"]))
+        }
+        if d.mediaErrors > 0 {
+            out.append(Finding(id: "\(id).errors", ruleID: id, category: .storage, title: String(localized: "Dysk SSD zarejestrował błędy nośnika (\(d.mediaErrors))"),
+                               detail: String(localized: "Pojedyncze błędy nie muszą oznaczać awarii, ale warto mieć aktualną kopię zapasową i obserwować, czy liczba rośnie."),
+                               severity: .warning, certainty: .confirmed, evidenceIDs: ["ssd.errors"]))
+        }
+        if d.percentUsed >= 80 {
+            out.append(Finding(id: "\(id).wear", ruleID: id, category: .storage, title: String(localized: "Dysk SSD zużyty w \(d.percentUsed)%"),
+                               detail: String(localized: "To szacunek producenta dotyczący liczby zapisów. Dysk może działać dłużej, ale kopia zapasowa jest tu szczególnie ważna."),
+                               severity: d.percentUsed >= 100 ? .warning : .info, certainty: .confirmed, evidenceIDs: ["ssd.used", "ssd.written"]))
         }
         return out
     }

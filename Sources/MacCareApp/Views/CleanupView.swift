@@ -3,7 +3,7 @@ import MacCareCore
 
 /// Porządki: start → skanowanie → wynik (siatka „bento” kategorii) → widok szczegółów (lista kategorii + lista elementów).
 struct CleanupView: View {
-    @EnvironmentObject private var live: LiveMetrics                                // dane na żywo – przeliczanie tylko tego widoku
+    @EnvironmentObject private var disk: LiveDiskFacts                              // audyt 2 (4.5): tylko liczba migawek, nie pomiary co 2 s
     @EnvironmentObject var model: AppModel
 
     var body: some View {
@@ -14,7 +14,7 @@ struct CleanupView: View {
             case .scanning:
                 ModuleStart(module: .cleanup, scanTitle: String(localized: "Skanuj"), scanning: true, stage: String(localized: "Sprawdzam znane lokalizacje z listy dozwolonych…"), onCancel: { model.cancelScan() }) {}
             case .result:
-                if model.cleanupDetail { CleanupDetail(focus: $model.cleanupFocus, back: { withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) { model.cleanupDetail = false } }) }
+                if model.cleanupDetail { CleanupDetail(focus: $model.cleanupFocus, back: { Motion.perform(.spring(response: 0.45, dampingFraction: 0.85)) { model.cleanupDetail = false } }) }
                 else { result }
             }
         }
@@ -32,7 +32,7 @@ struct CleanupView: View {
 
     private var result: some View {
         let g = grouped
-        let snapshots = model.snapshot?.localSnapshots?.count ?? 0
+        let snapshots = disk.localSnapshotCount
         let simple = model.viewMode == .simple
         return ScrollView {
             VStack(spacing: 18) {
@@ -110,7 +110,7 @@ struct CleanupView: View {
 
     private func openDetail(_ cat: CleanupCategory?) {
         model.cleanupFocus = cat
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) { model.cleanupDetail = true }
+        Motion.perform(.spring(response: 0.45, dampingFraction: 0.85)) { model.cleanupDetail = true }
     }
 
     /// Zaznacza bezpieczne elementy tej kategorii i pokazuje arkusz (podgląd/zatwierdzenie).
@@ -205,7 +205,7 @@ struct CleanupDetail: View {
 }
 
 struct CleanupItemRow: View {
-    @EnvironmentObject private var live: LiveMetrics                                // dane na żywo – przeliczanie tylko tego widoku
+    @EnvironmentObject private var disk: LiveDiskFacts                              // audyt 2 (4.5): tylko liczba migawek, nie pomiary co 2 s
     @EnvironmentObject var model: AppModel
     let candidate: CleanupCandidate
 
@@ -238,7 +238,7 @@ struct CleanupItemRow: View {
                 Text(ByteFormat.string(c.reclaimableSize)).font(Theme.Typo.metricSmall).foregroundStyle(Theme.Palette.text)
                 if !simple && c.allocatedSize > c.reclaimableSize * 2 && c.allocatedSize > 1_000_000 {
                     Label("zajęte \(ByteFormat.string(c.allocatedSize))", systemImage: "info.circle").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.info)
-                        .help("Odzyskiwalne: \(ByteFormat.string(c.reclaimableSize)) z \(ByteFormat.string(c.allocatedSize)). Resztę trzymają klony APFS, twarde dowiązania lub lokalne migawki Time Machine (obecnie: \(model.snapshot?.localSnapshots?.count ?? 0)); wróci po ich wygaśnięciu (zwykle do 24 godz.).")
+                        .help("Odzyskiwalne: \(ByteFormat.string(c.reclaimableSize)) z \(ByteFormat.string(c.allocatedSize)). Resztę trzymają klony APFS, twarde dowiązania lub lokalne migawki Time Machine (obecnie: \(disk.localSnapshotCount)); wróci po ich wygaśnięciu (zwykle do 24 godz.).")
                 }
             }
         }

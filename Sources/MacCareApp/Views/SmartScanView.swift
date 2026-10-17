@@ -86,7 +86,7 @@ struct SmartScanView: View {
             VStack(spacing: 12) {
                 RecommendationList(findings: shown, limit: 5)
                 if list.count > 5 {
-                    Button(showAll ? String(localized: "Pokaż mniej") : String(localized: "Pokaż wszystkie (\(list.count))")) { withAnimation(.spring()) { showAll.toggle() } }.buttonStyle(.plain).actionTarget().foregroundStyle(Theme.Palette.textSecondary).padding(.top, 4)
+                    Button(showAll ? String(localized: "Pokaż mniej") : String(localized: "Pokaż wszystkie (\(list.count))")) { Motion.perform(.spring()) { showAll.toggle() } }.buttonStyle(.plain).actionTarget().foregroundStyle(Theme.Palette.textSecondary).padding(.top, 4)
                 }
             }
             .padding(.vertical, 4).padding(.trailing, 4)

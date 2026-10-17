@@ -147,18 +147,33 @@ final class DiskMapStore: ObservableObject {
     /// Ile folderów wczytano z pliku przy starcie (diagnostyka i testy).
     private(set) var loadedListingCount = 0
 
-    init(root: String, maxListings: Int = 200, maxCachedNodes: Int = 20_000, persistenceURL: URL? = nil, home: String = NSHomeDirectory()) {
+    /// `loadNow: false` (aplikacja, audyt 2 – 4.11): pamięć wczytuje `loadPersisted()` poza wątkiem głównym, okno nie czeka na dysk.
+    init(root: String, maxListings: Int = 200, maxCachedNodes: Int = 20_000, persistenceURL: URL? = nil, home: String = NSHomeDirectory(), loadNow: Bool = true) {
         rootPath = root; path = [root]; self.maxListings = maxListings; self.maxCachedNodes = maxCachedNodes
         self.persistenceURL = persistenceURL; self.home = home
-        if let url = persistenceURL, let data = try? Data(contentsOf: url), let entries = DiskMapPersistence.decode(data, home: home) {   // try? świadomie: brak lub uszkodzona pamięć mapy ⇒ zwykły skan
-            for e in entries.sorted(by: { $0.measuredAt < $1.measuredAt }).suffix(maxListings) {
-                cache[e.dir] = Listing(nodes: e.nodes, measuredAt: e.measuredAt, dirMTime: e.dirMTime, inaccessible: e.inaccessible, unreadableInside: e.unreadableInside,
-                                       checkpoint: e.checkpoint, unreadableByChild: e.unreadableByChild, previousSizes: e.previousSizes, previousAt: e.previousAt)
-                lru.append(e.dir)
-            }
-            loadedListingCount = cache.count
-            if cache[root] != nil { present() }
+        if loadNow, let entries = Self.readPersisted(persistenceURL, home: home) { adopt(entries) }
+    }
+
+    nonisolated static func readPersisted(_ url: URL?, home: String) -> [DiskMapPersistence.Entry]? {
+        guard let url, let data = try? Data(contentsOf: url) else { return nil }        // try? świadomie: brak lub uszkodzona pamięć mapy ⇒ zwykły skan
+        return DiskMapPersistence.decode(data, home: home)
+    }
+
+    /// Odczyt i dekodowanie pliku poza wątkiem głównym. Foldery zmierzone w międzyczasie (skan rozpoczęty przed końcem odczytu) nie są nadpisywane.
+    func loadPersisted() async {
+        let url = persistenceURL, home = self.home
+        guard let entries = await Task.detached(priority: .userInitiated, operation: { Self.readPersisted(url, home: home) }).value else { return }
+        adopt(entries)
+    }
+
+    private func adopt(_ entries: [DiskMapPersistence.Entry]) {
+        for e in entries.sorted(by: { $0.measuredAt < $1.measuredAt }).suffix(maxListings) where cache[e.dir] == nil {
+            cache[e.dir] = Listing(nodes: e.nodes, measuredAt: e.measuredAt, dirMTime: e.dirMTime, inaccessible: e.inaccessible, unreadableInside: e.unreadableInside,
+                                   checkpoint: e.checkpoint, unreadableByChild: e.unreadableByChild, previousSizes: e.previousSizes, previousAt: e.previousAt)
+            lru.append(e.dir)
         }
+        loadedListingCount = cache.count
+        if cache[rootPath] != nil, !scanning, path == [rootPath] { present() }
     }
 
     /// Zapis pamięci wyników (z opóźnieniem 2 s, kolejne zmiany w tym czasie łączą się w jeden zapis). Zapis poza wątkiem głównym, atomowy.
@@ -255,6 +270,19 @@ final class DiskMapStore: ObservableObject {
             return d.magnitude >= max(Self.minVisibleChange, prev / 20) ? SizeChange(delta: d, isNew: false, since: at) : nil
         }
         return n.size >= Self.minVisibleChange ? SizeChange(delta: Int64(clamping: n.size), isNew: true, since: at) : nil
+    }
+
+    /// 17.10 („co urosło w tym tygodniu”): foldery `dir`, które od wcześniejszego pomiaru urosły o ≥ 100 MB. Tylko gdy punkt odniesienia ma 2–21 dni,
+    /// a bieżący wynik nie jest starszy niż tydzień – inaczej porównanie nie dotyczyłoby „tego tygodnia” (pusta lista, bez zgadywania).
+    static let weeklyMinGrowth: Int64 = 100_000_000
+    func weeklyGrowth(of dir: String, now: Date = Date()) -> [WeeklyGrowth.Grown] {
+        guard let l = cache[dir], let at = l.previousAt else { return [] }
+        let age = now.timeIntervalSince(at)
+        guard age >= 2 * 86400, age <= 21 * 86400, now.timeIntervalSince(l.measuredAt) <= 7 * 86400 else { return [] }
+        return l.nodes.compactMap { n in
+            let d = Int64(clamping: n.size) - Int64(clamping: l.previousSizes[n.name] ?? 0)
+            return d >= Self.weeklyMinGrowth ? WeeklyGrowth.Grown(name: n.name, delta: d) : nil
+        }
     }
 
     /// F12: elementy obecne we wcześniejszym pomiarze, których już nie ma (i nie są „bez dostępu”) – od największych; pomijalne (< 10 MB) pominięte.

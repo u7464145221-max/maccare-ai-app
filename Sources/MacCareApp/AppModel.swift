@@ -57,6 +57,8 @@ struct SmartScanSummary {
     var findings: Int
     var safeReclaimable: UInt64
     var totalReclaimable: UInt64
+    /// Skan czyszczenia objął wszystkie miejsca (niepełny ≠ pełny – podsumowanie w powiadomieniu to mówi).
+    var complete: Bool = true
 }
 
 @MainActor
@@ -191,6 +193,18 @@ final class AppModel: ObservableObject {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") { NSWorkspace.shared.open(url) }
     }
 
+    /// 17.10 (decyzja właściciela): elementy autostartu wyłącza użytkownik w Ustawieniach systemowych – MacCare tylko otwiera właściwe miejsce.
+    func openLoginItemsSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") { NSWorkspace.shared.open(url) }
+    }
+
+    /// 17.10: prywatność przeglądarek – tylko podgląd rozmiarów (bez czytania treści, bez czyszczenia). nil = jeszcze nie odczytano.
+    @Published private(set) var browserPrivacy: [BrowserPrivacy]?
+    func loadBrowserPrivacy() async {
+        let home = self.home
+        browserPrivacy = await Task.detached(priority: .utility) { BrowserPrivacy.read(home: home) }.value
+    }
+
     /// Przechodzi do „Moje pliki”; w trybie Prostym przełącza najpierw widok na Profesjonalny (tam znajduje się ten moduł).
     func openMyFiles() {
         if viewMode != .pro { setViewMode(.pro) }
@@ -312,14 +326,13 @@ final class AppModel: ObservableObject {
                                              appKnownToSystem: { AppInventory.launchServicesKnows($0) })      // audyt 2.2: aplikacja w dowolnym miejscu
         executor = ToolExecutor(registry: registry, policy: ApprovalPolicy(), mode: .assistant, audit: store)
         assistant = AssistantStore(executor: ToolExecutor(registry: registry, policy: ApprovalPolicy(), mode: .assistant, audit: store))
-        diskMap = DiskMapStore(root: home, persistenceURL: dir.appendingPathComponent("diskmap-cache.lzfse"), home: home)   // F4: wynik mapy zapamiętany między uruchomieniami
-        apps = AppsStore(home: home)
+        diskMap = DiskMapStore(root: home, persistenceURL: dir.appendingPathComponent("diskmap-cache.lzfse"), home: home, loadNow: false)   // F4: wynik mapy zapamiętany między uruchomieniami
+        apps = AppsStore(home: home, sizeCacheURL: dir.appendingPathComponent("apps-cache.json"))   // audyt 2 (4.8): rozmiary aplikacji między uruchomieniami
         executionObservation = executionState.observe { [weak self] mode in Task { @MainActor in self?.executionModeChanged(mode) } }
         purgeExpiredQuarantine()
-        reloadHistory()
         diskMap.duplicateClones = APFSCloneInfo()                  // duplikaty: kopie APFS współdzielą dane – ich usunięcie nie zwalnia miejsca
         assistant.memory = { [weak self] in self?.snapshot?.memory }
-        if diskMap.isCached(home) { phases[.files] = .result }               // F4: zapamiętana mapa jest widoczna od razu (stara jest odświeżana w tle)
+        startupLoads = Task { [weak self] in await self?.loadAtStartup() }               // audyt 2 (4.10, 4.11): odczyty z dysku poza wątkiem głównym
         assistant.preferredModel = store.setting(Self.assistantModelKey)
         assistant.onPreferenceChange = { [weak self] v in self?.history.setSetting(Self.assistantModelKey, v) }
     }
@@ -329,7 +342,7 @@ final class AppModel: ObservableObject {
 
     func setViewMode(_ m: ViewMode) {
         guard m != viewMode else { return }
-        withAnimation(.easeInOut(duration: 0.3)) {
+        Motion.perform(.easeInOut(duration: 0.3)) {
             viewMode = m
             if !m.allows(module) { module = .smartScan }              // moduł niedostępny w Prostym ⇒ wróć do Smart Scan
         }
@@ -370,10 +383,10 @@ final class AppModel: ObservableObject {
     }
 
     func phase(_ m: AppModule) -> ModulePhase { phases[m] ?? .start }
-    func setPhase(_ m: AppModule, _ p: ModulePhase) { withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { phases[m] = p } }
+    func setPhase(_ m: AppModule, _ p: ModulePhase) { Motion.perform(.spring(response: 0.45, dampingFraction: 0.8)) { phases[m] = p } }
     func restart(_ m: AppModule) { setPhase(m, .start) }
     /// Przejście do modułu (np. z kafla wyniku „Przejrzyj”).
-    func open(_ m: AppModule) { guard m.isBuilt else { return }; withAnimation(.easeInOut(duration: 0.4)) { module = m } }
+    func open(_ m: AppModule) { guard m.isBuilt else { return }; Motion.perform(.easeInOut(duration: 0.4)) { module = m } }
 
     // MARK: Cykl życia
     // MARK: Widoczność okna (AUD-PERF-1)
@@ -450,6 +463,55 @@ final class AppModel: ObservableObject {
         var newVersion: String?
         if case .available(let r) = updates.state { newVersion = r.tag }
         if notifier.enabled { notifier.evaluate(freeBytes: freeSpace(), findings: findings, newVersion: newVersion) }   // audyt 2: odczyt wolumenu tylko, gdy potrzebny
+        await refreshWeekly()
+    }
+
+    // MARK: Tydzień w skrócie (decyzje właściciela 4–6, 17.10.2026)
+    /// Tempo zapełniania dysku startowego z próbek historii (pasek menu, powiadomienie tygodniowe). nil = za mało danych.
+    @Published private(set) var diskTrend: DiskTrend?
+    private var trendComputedAt: Date?
+    static let trendRefresh: TimeInterval = 15 * 60
+    static let scheduleEnabledAtKey = "smartScan.enabledAt"
+
+    var smartScanSchedule: SmartScanSchedule { SmartScanSchedule(rawValue: notifier.defaults.string(forKey: SmartScanSchedule.storageKey) ?? "") ?? .off }
+
+    func setSmartScanSchedule(_ s: SmartScanSchedule, now: Date = Date()) {
+        guard s != smartScanSchedule else { return }
+        objectWillChange.send()
+        notifier.defaults.set(s.rawValue, forKey: SmartScanSchedule.storageKey)
+        notifier.defaults.set(now, forKey: Self.scheduleEnabledAtKey)                 // pierwszy automatyczny skan dopiero po pełnym okresie
+    }
+
+    func refreshWeekly(now: Date = Date()) async {
+        if trendComputedAt.map({ now.timeIntervalSince($0) >= Self.trendRefresh || now < $0 }) ?? true {
+            trendComputedAt = now
+            let h = history
+            let samples = await Task.detached(priority: .utility) { h.series("disk.free", since: now.addingTimeInterval(-7 * 86400)) }.value
+            let t = DiskTrend.compute(samples, now: now)
+            if t != diskTrend { diskTrend = t }
+        }
+        if notifier.enabled, let n = WeeklyGrowth.notice(trend: diskTrend, grown: diskMap.weeklyGrowth(of: home, now: now),
+                                                         lastSent: notifier.lastSent[WeeklyGrowth.kind], now: now) {
+            notifier.send(n, now: now)
+        }
+        await runScheduledSmartScanIfDue(now: now)
+    }
+
+    /// Automatyczny Smart Scan wg harmonogramu – tylko odczyt (jak ręczny). Nie przeszkadza: nie rusza, gdy użytkownik pracuje w oknie MacCare,
+    /// w trybie Edycja, w trakcie innego skanu, przy zaznaczonych elementach Porządków (wynik by je podmienił) ani w trybie niskiego zużycia energii.
+    @discardableResult
+    func runScheduledSmartScanIfDue(now: Date = Date(), windowInUse: Bool? = nil) async -> Bool {
+        let d = notifier.defaults
+        guard smartScanSchedule.isDue(lastRun: d.object(forKey: SmartScanSchedule.lastRunKey) as? Date,
+                                      enabledAt: d.object(forKey: Self.scheduleEnabledAtKey) as? Date, now: now) else { return false }
+        let inUse = windowInUse ?? (appVisible && NSApp?.isActive == true)
+        guard !inUse, isReadOnlyMode, scanStage == nil, !cleanupScanning, selection.isEmpty, !ProcessInfo.processInfo.isLowPowerModeEnabled else { return false }
+        d.set(now, forKey: SmartScanSchedule.lastRunKey)                                  // zapis przed skanem – błąd skanu nie powoduje ponawiania co chwilę
+        await smartScan()
+        if let s = smartSummary, notifier.enabled {
+            notifier.send(SmartScanSchedule.summaryNotice(health: s.health, issues: issueCount(findings), safeReclaimable: s.safeReclaimable, complete: s.complete), now: now)
+        }
+        return true
     }
 
     func evidence(_ id: String) -> Evidence? { evidenceByID[id] }
@@ -469,7 +531,7 @@ final class AppModel: ObservableObject {
     var protectionFindings: [Finding] { Self.protection(findings) }
     var performanceFindings: [Finding] { Self.performance(findings) }
     static func protection(_ f: [Finding]) -> [Finding] { f.filter { [.security, .startup].contains($0.category) || ($0.category == .stability && $0.ruleID == "stability.crashes") } }
-    static func performance(_ f: [Finding]) -> [Finding] { f.filter { [.cpu, .memory, .thermal, .battery].contains($0.category) || ($0.category == .stability && $0.ruleID != "stability.crashes") } }
+    static func performance(_ f: [Finding]) -> [Finding] { f.filter { [.cpu, .memory, .thermal, .battery].contains($0.category) || ($0.category == .stability && $0.ruleID != "stability.crashes") || $0.ruleID == "storage.ssd" } }
     var cleanupFindings: [Finding] { findings.filter { [.storage, .cleanup].contains($0.category) } }
 
     /// Werdykt o stanie Maca – JEDNO źródło dla obu trybów (Prosty: „Wszystko OK / Wymaga uwagi / Pilne”, Profesjonalny: poniższe etykiety).
@@ -504,7 +566,7 @@ final class AppModel: ObservableObject {
         phases[.cleanup] = .result
         let health = assessment?.overall
         if r.isComplete { history.recordScan(kind: "smart", at: Date(), findings: findings, reclaimable: r.safeReclaimable, health: health) }
-        smartSummary = SmartScanSummary(date: Date(), health: health, findings: findings.count, safeReclaimable: r.safeReclaimable, totalReclaimable: r.totalReclaimable)
+        smartSummary = SmartScanSummary(date: Date(), health: health, findings: findings.count, safeReclaimable: r.safeReclaimable, totalReclaimable: r.totalReclaimable, complete: r.isComplete)
         scanStage = nil
         setPhase(.smartScan, .result)
         reloadHistory()
@@ -754,6 +816,21 @@ final class AppModel: ObservableObject {
     }
 
     // MARK: Historia i kwarantanna
+    /// Audyt 2 (4.10, 4.11): historia i pamięć mapy czytane w tle; okno pokazuje się bez czekania na dysk. Testy czekają na `startupLoads`.
+    private(set) var startupLoads: Task<Void, Never>?
+
+    private func loadAtStartup() async {
+        let h = history, q = quarantine
+        let r = await Task.detached(priority: .userInitiated) {
+            (scans: h.scans(limit: 100), ops: h.operations(limit: 200), reclaimed: h.totalReclaimedMeasured(), bench: h.benchmarks(limit: 30),
+             quarantine: q.entries.sorted { $0.quarantinedAt > $1.quarantinedAt })
+        }.value
+        scans = r.scans; operations = r.ops; measuredReclaimedTotal = r.reclaimed; benchmarks = r.bench; quarantineEntries = r.quarantine
+        historyProblem = Self.historyProblem(failures: history.failureCount, lastError: history.lastError, manifestError: quarantine.lastManifestError)
+        await diskMap.loadPersisted()
+        if diskMap.isCached(home), phases[.files] == nil || phases[.files] == .start { phases[.files] = .result }   // F4: zapamiętana mapa widoczna od razu
+    }
+
     func reloadHistory() {
         scans = history.scans(limit: 100)
         operations = history.operations(limit: 200)

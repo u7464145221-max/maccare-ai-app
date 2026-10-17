@@ -11,6 +11,8 @@ As of October 16, 2026 (after an independent audit that found incorrect statemen
 - After launch the program changes nothing. Changes are possible only in Edit mode, which you turn on yourself and which turns off after a period of inactivity you choose in Settings (5–60 min, 15 by default). Currently Edit mode only lets you move to the Trash: items you selected yourself (in My Files and in Cleanup), an app you chose together with the data of it you selected, and selected leftovers of apps that are no longer installed – always after your confirmation. The AI assistant cannot perform any of these operations (`LLMActionInvariantTests`).
 
 ## What the program reads
+- **SSD health** – the built-in drive's SMART log (wear, spare capacity, temperature, data written, power-on hours, media errors) via the system IOKit interface, read-only and without an administrator password. The program does not read the drive's serial number (`SSDHealthTests`, `SSDHealthLiveTests`).
+- **Browsers** (Protection → Browsers tab) – only the sizes of history and cookie files and caches of Safari, Chrome, Brave, Edge, Arc, Vivaldi and Firefox. The program does not read visited addresses or cookies, deletes nothing and does not look into the Safari container (`BrowserPrivacyTests`).
 - **File names, sizes and dates** – for the disk map, large files and Cleanup. It does not read file contents, except for:
   - **Duplicates** – it compares the contents of files of the same size (a cryptographic hash) so that different files are never confused.
   - **Similar photos** – it reads photo thumbnails.
@@ -22,7 +24,8 @@ As of October 16, 2026 (after an independent audit that found incorrect statemen
 
 ## What the program stores (only on your Mac)
 In `~/Library/Application Support/MacCare AI`:
-- `history.sqlite` – scan history, detected issues, measurement samples (condensed after 7 days), the operations log, before/after measurements and settings. Paths inside your home folder are stored with “~” instead of your account name in every table (`HistoryRedactionTests`). If the database gets damaged, the damaged file is kept next to it as `history.sqlite.corrupt-…`.
+- `history.sqlite` – scan history, detected issues, measurement samples (condensed after 7 days; entries older than about 13 months, and operations-log entries older than 2 years, are removed: `retentionPrunesOnlyOldRowsAndKeepsReclaimedTotal`), the operations log, before/after measurements and settings. Paths inside your home folder are stored with “~” instead of your account name in every table (`HistoryRedactionTests`). If the database gets damaged, the damaged file is kept next to it as `history.sqlite.corrupt-…`.
+- `apps-cache.json` – remembered app sizes so the app list appears immediately (paths with “~”). A size is measured again when the app changes (`appSizesAreRememberedUntilTheBundleChanges`).
 - `diskmap-cache.lzfse` – remembered folder sizes, so the disk map appears instantly after launch (paths with “~”).
 - `bench` – a temporary folder for the file-speed measurement taken during operations in Edit mode; the measurement files are deleted right away.
 - `quarantine` – items moved to quarantine (this path is currently off – Cleanup moves items to the Trash). Permanent deletion from quarantine is currently unavailable, even in Edit mode (`expiredQuarantineIsNotPurgedOnStartupInReadOnly`).
@@ -36,7 +39,7 @@ The assistant runs only locally: through Ollama on your Mac (with a model runnin
 This version of the app has no report export. This description will be updated when it does.
 
 ## Permissions
-- **Notifications** – optional, off by default. When you turn them on in Settings, macOS asks for permission once; MacCare then shows local notifications only about low disk space, a critical Protection issue and a new version – each kind at most once a day, with nothing sent off your Mac (`ImportantNotifierTests`).
+- **Notifications** – optional, off by default. When you turn them on in Settings, macOS asks for permission once; MacCare then shows local notifications only about low disk space, a critical Protection issue and a new version (each kind at most once a day), a weekly “what grew” summary and the result of the automatic Smart Scan if you turn it on in Settings (off by default; it runs only while MacCare is open and deletes nothing). Nothing is sent off your Mac (`ImportantNotifierTests`, `WeeklyFeaturesAppTests`).
 - **Full Disk Access** – optional. Without it some folders (such as Mail and Safari) are skipped and the result is marked as incomplete.
 - **Administrator password** – only in the macOS system dialog, when you ask for detailed sensors yourself (a one-time `powermetrics` reading). The password never reaches the program and is not stored.
 

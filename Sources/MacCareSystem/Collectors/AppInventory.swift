@@ -97,12 +97,21 @@ public enum AppInventory {
         Set(["/opt/homebrew/Caskroom", "/usr/local/Caskroom"].flatMap { (try? FileManager.default.contentsOfDirectory(atPath: $0)) ?? [] }.map { $0.lowercased() })   // try? świadomie: nieczytelny katalog ⇒ brak wpisów (tylko odczyt)
     }
 
+    /// Audyt 2 (4.8): odcisk pakietu do pamięci rozmiarów – folder `.app` i jego `Contents/Info.plist` (urządzenie, i-węzeł, rozmiar, data zmiany).
+    /// Aktualizacja aplikacji podmienia Info.plist (i zwykle cały pakiet), więc rozmiar liczony jest wtedy od nowa. nil = nie da się odczytać ⇒ pomiar.
+    public static func sizeKey(_ path: String, version: String) -> String? {
+        guard let b = FileStat.of(path), !b.isSymlink, let i = FileStat.of(path + "/Contents/Info.plist") else { return nil }
+        return [FileFingerprint(b).encoded, FileFingerprint(i).encoded, version].joined(separator: "|")
+    }
+
     /// Szczegóły jednej aplikacji (rozmiar, ostatnie użycie, podpis, architektury). Podpis przez serializowaną kolejkę.
-    public static func details(_ r: Ref, casks: Set<String>) async -> InstalledApp {
+    /// Audyt 2 (4.8): `knownSize` = rozmiar z pamięci podręcznej (pakiet bez zmian od ostatniego pomiaru) – bez ponownego liczenia.
+    public static func details(_ r: Ref, casks: Set<String>, knownSize: UInt64? = nil) async -> InstalledApp {
         let url = URL(fileURLWithPath: r.path)
         var used: Date?
         if let item = MDItemCreateWithURL(nil, url as CFURL), let d = MDItemCopyAttribute(item, kMDItemLastUsedDate) as? Date { used = d }
-        let size = await Task.detached(priority: .utility) { DiskUsage.measure(r.path).allocated }.value
+        let size: UInt64
+        if let knownSize { size = knownSize } else { size = await Task.detached(priority: .utility) { DiskUsage.measure(r.path).allocated }.value }
         let sig = await CodeSignatureChecker.check(path: r.path, deep: false)
         var arch: [String] = []
         if let exe = r.executable, let h = FileHandle(forReadingAtPath: r.path + "/Contents/MacOS/" + exe) {

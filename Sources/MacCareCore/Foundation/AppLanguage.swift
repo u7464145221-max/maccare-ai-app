@@ -21,6 +21,7 @@ public enum EnglishPlurals {
         "elementu|elementów|elementów": ("item", "items"),
         "aplikacja|aplikacje|aplikacji": ("app", "apps"),
         "dzień|dni|dni": ("day", "days"),
+        "profil|profile|profili": ("profile", "profiles"),
         "grupa|grupy|grup": ("group", "groups"),
         "kopia|kopie|kopii": ("copy", "copies"),
         "krok|kroki|kroków": ("step", "steps"),

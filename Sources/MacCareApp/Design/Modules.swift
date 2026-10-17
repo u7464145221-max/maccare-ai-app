@@ -146,7 +146,7 @@ struct ModuleBackground: View {
                     .opacity(m == module ? 1 : 0)
             }
         }
-        .animation(.easeInOut(duration: 0.4), value: module)
+        .animation(Motion.animation(.easeInOut(duration: 0.4)), value: module)
         .ignoresSafeArea()
     }
 }

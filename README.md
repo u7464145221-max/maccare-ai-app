@@ -5,11 +5,12 @@ Aplikacja do dbania o Maca: pokazuje, co zajmuje miejsce na dysku, co można bez
 **Zasada nadrzędna: po uruchomieniu program tylko czyta.** Zmiany są możliwe wyłącznie w trybie Edycja, który włączasz sam i który wyłącza się po bezczynności (domyślnie 15 minut). Nawet wtedy wszystko trafia do Kosza macOS, skąd możesz to przywrócić – nic nie jest kasowane na stałe.
 
 ## Co potrafi
-- **Smart Scan** – jeden skan: porządki, ochrona i wydajność z oceną stanu i dowodami.
+- **Smart Scan** – jeden skan: porządki, ochrona i wydajność z oceną stanu i dowodami; opcjonalnie automatycznie codziennie lub co tydzień, z podsumowaniem w powiadomieniu.
 - **Moje pliki** – mapa dysku (bąbelki albo prostokąty), duże pliki, duplikaty, podobne zdjęcia; zmiany od wcześniejszego pomiaru.
 - **Porządki** – 47 reguł (pamięć podręczna aplikacji i przeglądarek, logi, narzędzia programistyczne, modele AI, instalatory…); czyszczenie przez Kosz.
-- **Ochrona** – SIP, Gatekeeper, FileVault, zapora, autostart z weryfikacją podpisów, otwarte porty, awarie.
-- **Wydajność** – procesor, pamięć, bateria, temperatura, najbardziej obciążające procesy.
+- **Ochrona** – SIP, Gatekeeper, FileVault, zapora, autostart z weryfikacją podpisów (i skrótem do Elementów logowania), otwarte porty, awarie, podgląd danych przeglądarek (tylko rozmiary).
+- **Wydajność** – procesor, pamięć, bateria, temperatura, kondycja dysku SSD (SMART), najbardziej obciążające procesy.
+- **Pasek menu** – wykresy procesora i pamięci, wolne miejsce z ostrzeżeniem, gdy dysk szybko się zapełnia; tygodniowe powiadomienie „co urosło”.
 - **Aplikacje** – lista z rozmiarem i podpisem, możliwe pozostałości, odinstalowanie przez Kosz.
 - **Asystent AI** – wyłącznie lokalnie (Ollama z modelem na Twoim Macu – modele „cloud” są odrzucane – albo model Apple na urządzeniu), tylko narzędzia odczytu. Wersja wczesna.
 - Interfejs po polsku i po angielsku (wg języka systemu).

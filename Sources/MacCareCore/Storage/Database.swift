@@ -44,6 +44,9 @@ public final class SQLiteDatabase: @unchecked Sendable {
         }
     }
 
+    /// Liczba wierszy zmienionych przez ostatnie polecenie (w tej samej blokadzie co transakcja – blokada rekurencyjna).
+    public var changes: Int { locked { Int(sqlite3_changes(db)) } }
+
     public func query(_ sql: String, _ params: [Value] = []) throws -> [[String: Value]] {
         try locked {
             let st = try prepare(sql, params); defer { sqlite3_finalize(st) }
@@ -160,6 +163,10 @@ public final class HistoryStore: AuditSink, @unchecked Sendable {
         CREATE TABLE IF NOT EXISTS findings_log(at REAL NOT NULL, finding_id TEXT NOT NULL, severity INTEGER, certainty TEXT, title TEXT);
         CREATE TABLE IF NOT EXISTS benchmarks(id TEXT PRIMARY KEY, at REAL NOT NULL, operation TEXT, verdict TEXT, payload TEXT);
         CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT);
+        CREATE INDEX IF NOT EXISTS operations_at ON operations(at);
+        CREATE INDEX IF NOT EXISTS scans_at ON scans(at);
+        CREATE INDEX IF NOT EXISTS findings_log_at ON findings_log(at);
+        CREATE INDEX IF NOT EXISTS benchmarks_at ON benchmarks(at);
         """)
         // Audyt 16.10 (3.8): wersja schematu jest CZYTANA. Starsza baza przechodzi kolejne migracje (`migrations[n]` = przejście n → n+1, w transakcji);
         // baza z nowszej wersji aplikacji nie jest „cofana” – zostaje bez zmian, a problem trafia do licznika błędów (widoczny w Historii).
@@ -249,6 +256,27 @@ public final class HistoryStore: AuditSink, @unchecked Sendable {
             """, [.double(cutoff)])
             try db.run("DELETE FROM samples WHERE at < ? AND agg = 0", [.double(cutoff)])
         } }
+    }
+
+    /// Audyt 2 (4.14): retencja historii (dni). Dziennik operacji – najdłużej, bo to zapis zmian na Macu; łączna suma odzyskanego miejsca
+    /// (`reclaimed`), ustawienia i metadane nie są przycinane. Wiek liczony od `now`, więc zmiana zegara do przodu przycina najwyżej starsze wpisy.
+    public static let retentionDays: [(table: String, days: Double)] = [
+        ("samples", 400), ("findings_log", 180), ("scans", 400), ("benchmarks", 400), ("operations", 730)
+    ]
+
+    /// Usuwa wpisy starsze niż okres retencji (jedna transakcja). Zwraca liczbę usuniętych wierszy (testy).
+    @discardableResult
+    public func pruneOld(now: Date = Date()) -> Int {
+        attempt("retencja historii", 0) {
+            var removed = 0
+            try db.transaction {
+                for (table, days) in Self.retentionDays {
+                    try db.run("DELETE FROM \(table) WHERE at < ?", [.double(now.timeIntervalSince1970 - days * 86400)])
+                    removed += db.changes
+                }
+            }
+            return removed
+        }
     }
 
     // MARK: Porównania przed/po

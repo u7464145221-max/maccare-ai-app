@@ -42,6 +42,7 @@ struct PerformanceView: View {
                     VStack(spacing: 16) {
                         batteryCard
                         thermalCard
+                        ssdCard
                         if !simple { DetailedSensorsCard() }
                     }.frame(width: 330)
                 }
@@ -114,6 +115,36 @@ struct PerformanceView: View {
                 } else { Text("Ten Mac nie ma baterii lub system nie udostępnia danych.").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary) }
             }
         }
+    }
+
+    /// 18.10 (decyzja właściciela): kondycja dysku SSD z dziennika SMART – tylko odczyt.
+    private var ssdCard: some View {
+        SurfaceCard(padding: 16, radius: 22) {
+            VStack(alignment: .leading, spacing: 6) {
+                Label("Dysk SSD", systemImage: "internaldrive").font(Theme.Typo.headline).foregroundStyle(Theme.Palette.text)
+                if let d = snap?.ssd {
+                    let bad = d.criticalWarning != 0 || d.availableSpare < d.availableSpareThreshold
+                    Text(simple ? Self.plainSSD(d) : String(localized: "zużycie \(d.percentUsed)%")).font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .foregroundStyle(bad ? Theme.Palette.critical : (d.percentUsed >= 80 || d.mediaErrors > 0 ? Theme.Palette.warning : Theme.Palette.text))
+                    if simple {
+                        Text(bad ? String(localized: "Dysk zgłasza problem – zrób kopię zapasową.") : String(localized: "Dysk działa prawidłowo."))
+                            .font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary)
+                    } else {
+                        Text(String(localized: "zapisano \(ByteFormat.string(d.dataWrittenBytes)) · \(d.powerOnHours) h pracy · błędy nośnika: \(d.mediaErrors)"))
+                            .font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary).fixedSize(horizontal: false, vertical: true)
+                        FlowRow { EvidenceChip(id: "ssd.used"); EvidenceChip(id: "ssd.spare"); EvidenceChip(id: "ssd.errors") }
+                    }
+                } else {
+                    Text("Brak danych SMART – dysk ich nie udostępnia albo odczyt się nie udał.").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary)
+                }
+            }
+        }
+    }
+
+    static func plainSSD(_ d: SSDHealth) -> String {
+        if d.criticalWarning != 0 || d.availableSpare < d.availableSpareThreshold { return String(localized: "wymaga uwagi") }
+        if d.percentUsed >= 80 || d.mediaErrors > 0 { return String(localized: "do obserwacji") }
+        return String(localized: "dobra kondycja")
     }
 
     private var thermalCard: some View {

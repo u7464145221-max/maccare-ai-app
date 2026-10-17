@@ -145,6 +145,7 @@ struct ModuleHero: View {
     var size: CGFloat = 220
     var tint: Color? = nil
     @State private var float = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let c = tint ?? module.color
@@ -169,8 +170,8 @@ struct ModuleHero: View {
         }
         .frame(width: size, height: size)
         .offset(y: float ? -6 : 6)
-        .animation(.easeInOut(duration: 3.2).repeatForever(autoreverses: true), value: float)
-        .onAppear { float = true }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 3.2).repeatForever(autoreverses: true), value: float)
+        .onAppear { float = !reduceMotion }                                              // audyt 2 (4.13): bez zapętlonego unoszenia przy „Ogranicz ruch”
         .accessibilityHidden(true)
     }
 }
@@ -186,6 +187,7 @@ struct ScanButton: View {
     var help: String = ""
     let action: () -> Void
     @State private var pulse = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let off = disabled && !scanning                       // wyłączony: własne tokeny (etykieta ≥ 4,5:1, obrys ≥ 3:1), bez przezroczystości
@@ -199,7 +201,7 @@ struct ScanButton: View {
                     Circle().trim(from: 0, to: progress.map { max(0.05, $0) } ?? 0.28)
                         .stroke(module.label, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                         .rotationEffect(.degrees(pulse ? 360 : 0))
-                        .animation(progress == nil ? .linear(duration: 1.1).repeatForever(autoreverses: false) : .default, value: pulse)
+                        .animation(reduceMotion ? nil : progress == nil ? .linear(duration: 1.1).repeatForever(autoreverses: false) : .default, value: pulse)
                         .padding(7)
                 }
                 Text(scanning ? "…" : title).font(.system(size: 17, weight: .semibold, design: .rounded)).foregroundStyle(off ? Theme.Palette.disabledLabel : module.label)
@@ -209,8 +211,8 @@ struct ScanButton: View {
         .buttonStyle(.plain)
         .disabled(disabled || scanning)
         .help(help)
-        .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: pulse)
-        .onAppear { pulse = true }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: pulse)
+        .onAppear { pulse = !reduceMotion }                                              // audyt 2 (4.13): bez pulsowania i obrotu przy „Ogranicz ruch”
     }
 }
 

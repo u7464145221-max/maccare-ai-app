@@ -231,6 +231,33 @@ public struct CrashReportSummary: Codable, Sendable, Hashable {
 
 /// Kompletny, deterministyczny obraz stanu Maca. Pola opcjonalne = system nie udostępnił danych
 /// (NIE są interpretowane jako „OK” ani karane w ocenie).
+/// Kondycja dysku SSD (NVMe SMART). Tylko liczby z dziennika – bez numeru seryjnego.
+public struct SSDHealth: Codable, Sendable, Equatable {
+    /// Zużycie wg producenta (0–100%; może przekroczyć 100 – szacunek resursu zapisów przekroczony).
+    public var percentUsed: Int
+    /// Zapas komórek zastępczych i próg, poniżej którego dysk zgłasza ostrzeżenie.
+    public var availableSpare: Int
+    public var availableSpareThreshold: Int
+    public var temperatureC: Double?
+    public var dataWrittenBytes: UInt64
+    public var dataReadBytes: UInt64
+    public var powerOnHours: UInt64
+    public var unsafeShutdowns: UInt64
+    public var mediaErrors: UInt64
+    /// Bity „critical warning” NVMe (0 = brak ostrzeżeń sprzętowych).
+    public var criticalWarning: Int
+    public init(percentUsed: Int, availableSpare: Int, availableSpareThreshold: Int, temperatureC: Double?, dataWrittenBytes: UInt64, dataReadBytes: UInt64,
+                powerOnHours: UInt64, unsafeShutdowns: UInt64, mediaErrors: UInt64, criticalWarning: Int) {
+        self.percentUsed = percentUsed; self.availableSpare = availableSpare; self.availableSpareThreshold = availableSpareThreshold
+        self.temperatureC = temperatureC; self.dataWrittenBytes = dataWrittenBytes; self.dataReadBytes = dataReadBytes
+        self.powerOnHours = powerOnHours; self.unsafeShutdowns = unsafeShutdowns; self.mediaErrors = mediaErrors; self.criticalWarning = criticalWarning
+    }
+    /// Jednostki danych NVMe = 1000 bloków po 512 B.
+    public static func bytes(dataUnits: UInt64) -> UInt64 { dataUnits.multipliedReportingOverflow(by: 512_000).partialValue }
+    /// Temperatura z kelwinów (0 = brak czujnika).
+    public static func celsius(kelvin: Int) -> Double? { kelvin > 0 ? Double(kelvin) - 273.15 : nil }
+}
+
 public struct SystemSnapshot: Codable, Sendable {
     public var takenAt: Date
     public var osVersion: String
@@ -253,6 +280,8 @@ public struct SystemSnapshot: Codable, Sendable {
     public var localSnapshots: [Date]?
     /// Aktualizacje systemu i aplikacji Apple oczekujące według OSTATNIEGO sprawdzenia przez macOS (P2-10, etap 1). nil = nieznane.
     public var updates: SoftwareUpdateStatus? = nil
+    /// Kondycja wbudowanego dysku SSD z dziennika SMART NVMe (18.10, decyzja właściciela). nil = nieznana (brak NVMe/SMART albo błąd odczytu).
+    public var ssd: SSDHealth? = nil
     public var synthetic: Bool
 
     public init(takenAt: Date, osVersion: String, modelIdentifier: String? = nil, isAppleSilicon: Bool? = nil,
@@ -328,6 +357,15 @@ public struct SystemSnapshot: Codable, Sendable {
             if let h = b.healthPercent { add("bat.health", b.healthSource, String(localized: "Kondycja baterii"), String(format: "%.0f%%", h), h, "%") }
             if let cond = b.condition { add("bat.condition", b.conditionSource ?? "IOPowerSources BatteryHealth", String(localized: "Stan baterii wg systemu"), cond) }
             if let temp = b.temperatureC { add("bat.temp", "AppleSmartBattery Temperature", String(localized: "Temperatura baterii"), String(format: "%.1f °C", temp), temp, "°C") }
+        }
+        if let d = ssd {
+            add("ssd.used", "NVMe SMART Percentage Used", String(localized: "Zużycie dysku SSD"), "\(d.percentUsed)%", Double(d.percentUsed), "%")
+            add("ssd.spare", "NVMe SMART Available Spare", String(localized: "Zapas komórek SSD"), String(localized: "\(d.availableSpare)% (próg \(d.availableSpareThreshold)%)"), Double(d.availableSpare), "%")
+            add("ssd.written", "NVMe SMART Data Units Written", String(localized: "Zapisano na dysk SSD"), ByteFormat.string(d.dataWrittenBytes), Double(d.dataWrittenBytes), "B")
+            add("ssd.hours", "NVMe SMART Power On Hours", String(localized: "Czas pracy dysku SSD"), String(localized: "\(d.powerOnHours) h"), Double(d.powerOnHours), "h")
+            add("ssd.errors", "NVMe SMART Media Errors", String(localized: "Błędy nośnika SSD"), "\(d.mediaErrors)", Double(d.mediaErrors))
+            add("ssd.warning", "NVMe SMART Critical Warning", String(localized: "Ostrzeżenie sprzętowe SSD"), d.criticalWarning == 0 ? String(localized: "brak") : String(localized: "tak (kod \(d.criticalWarning))"), Double(d.criticalWarning))
+            if let t = d.temperatureC { add("ssd.temp", "NVMe SMART Temperature", String(localized: "Temperatura dysku SSD"), String(format: "%.0f °C", t), t, "°C") }
         }
         if let th = thermal { add("thermal.state", "ProcessInfo.thermalState", String(localized: "Stan termiczny"), th.label, Double(th.rawValue)) }
         let groups = appGroups()

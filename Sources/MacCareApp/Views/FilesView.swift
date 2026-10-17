@@ -377,7 +377,7 @@ struct Breadcrumbs: View {
                 HStack(spacing: 4) {
                     ForEach(Array(map.path.enumerated()), id: \.offset) { i, p in
                         let last = i == map.path.count - 1
-                        Button((p as NSString).lastPathComponent.isEmpty ? "/" : (p as NSString).lastPathComponent) { withAnimation(.snappy) { map.go(to: i) } }.buttonStyle(.plain)
+                        Button((p as NSString).lastPathComponent.isEmpty ? "/" : (p as NSString).lastPathComponent) { Motion.perform(.snappy) { map.go(to: i) } }.buttonStyle(.plain)
                             .foregroundStyle(last ? Theme.Palette.text : Theme.Palette.textSecondary)
                             .font(.system(size: 14, weight: last ? .semibold : .regular)).actionTarget()
                         if !last { Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.Palette.textSecondary) }
@@ -433,7 +433,7 @@ struct BubbleChart: View {
         .animation(reduceMotion ? nil : .snappy(duration: 0.45), value: p.center)          // stały `id` bąbla ⇒ rosną i przesuwają się płynnie zamiast skakać
         .animation(reduceMotion ? nil : .snappy(duration: 0.45), value: p.radius)
         .help(b.tooltip)
-        .onTapGesture(count: 2) { if let n = b.node { withAnimation(.snappy) { map.open(n) } } }
+        .onTapGesture(count: 2) { if let n = b.node { Motion.perform(.snappy) { map.open(n) } } }
         .onTapGesture { map.highlighted = b.node?.path }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(b.label), \(ByteFormat.string(b.size)), \(b.category.label)")
@@ -483,7 +483,7 @@ struct TreemapChart: View {
         .animation(reduceMotion ? nil : .snappy(duration: 0.45), value: r)
         .contentShape(Rectangle())
         .help(b.tooltip)
-        .onTapGesture(count: 2) { if let n = b.node { withAnimation(.snappy) { map.open(n) } } }
+        .onTapGesture(count: 2) { if let n = b.node { Motion.perform(.snappy) { map.open(n) } } }
         .onTapGesture { map.highlighted = b.node?.path }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(b.label), \(ByteFormat.string(b.size)), \(b.category.label)")
@@ -528,7 +528,7 @@ struct IncompleteScanBar: View {
 }
 
 struct MapSection: View {
-    @EnvironmentObject private var live: LiveMetrics                                // dane na żywo – przeliczanie tylko tego widoku
+    @EnvironmentObject private var disk: LiveDiskFacts                              // audyt 2 (4.5): tylko dysk startowy, nie pomiary co 2 s
     @ObservedObject var map: DiskMapStore
     @ObservedObject var model: AppModel
     /// Osobny przełącznik „Także pliki w chmurze” (domyślnie wyłączony – pliki w chmurze są wtedy pomijane).
@@ -681,7 +681,7 @@ struct MapSection: View {
             }
             .frame(minWidth: 64, alignment: .trailing)
             if n.isDirectory {
-                Button { withAnimation(.snappy) { map.open(n) } } label: { Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.Palette.textSecondary).frame(width: 32, height: 32).contentShape(Rectangle()) }.accessibilityLabel("Otwórz folder \(n.name)")
+                Button { Motion.perform(.snappy) { map.open(n) } } label: { Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.Palette.textSecondary).frame(width: 32, height: 32).contentShape(Rectangle()) }.accessibilityLabel("Otwórz folder \(n.name)")
                     .buttonStyle(.plain).help("Otwórz folder")
             }
         }
@@ -692,7 +692,7 @@ struct MapSection: View {
         .onTapGesture { map.highlighted = n.path }
         .contextMenu {
             Button("Pokaż w Finderze") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: n.path)]) }
-            if n.isDirectory { Button("Otwórz folder na mapie") { withAnimation(.snappy) { map.open(n) } } }
+            if n.isDirectory { Button("Otwórz folder na mapie") { Motion.perform(.snappy) { map.open(n) } } }
             Divider()
             if model.canTrashSelected {
                 Button("Przenieś do Kosza (zaznaczone: \(Plural.elements(map.selected.union([n.path]).count)))…") {
@@ -745,7 +745,7 @@ struct MapSection: View {
 
     /// Stopka: pasek zajętości dysku + zaznaczenie i akcje. W wąskim oknie układa się pionowo (`ViewThatFits`), więc przycisk nigdy nie wychodzi poza okno.
     private var diskBar: some View {
-        let v = model.snapshot?.bootVolume ?? model.bootVolumeQuick                // stopka pokazuje dysk od razu, bez czekania na pierwszy pełny pomiar systemu
+        let v = disk.bootVolume ?? model.bootVolumeQuick                // stopka pokazuje dysk od razu, bez czekania na pierwszy pełny pomiar systemu
         let disk = VStack(alignment: .leading, spacing: 5) {
             Text(v.map { String(localized: "\($0.name): zajęte \(ByteFormat.string($0.total - $0.availableImportant)) z \(ByteFormat.string($0.total))") } ?? String(localized: "Dysk"))
                 .font(Theme.Typo.body.weight(.semibold)).foregroundStyle(Theme.Palette.text)

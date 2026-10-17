@@ -20,13 +20,16 @@ Stan na 16.10.2026, po niezależnym audycie, który znalazł w poprzedniej wersj
   - **podobnych zdjęć** – odczytuje miniatury zdjęć;
   - **aplikacji i elementów autostartu** – odczytuje ich opis (`Info.plist`) i sprawdza podpis kodu przez system.
 - **Informacje o systemie** – obciążenie procesora i pamięci, stan baterii, temperatura, ustawienia zabezpieczeń (SIP, Gatekeeper, FileVault, zapora), elementy autostartu, otwarte porty, raporty awarii z `~/Library/Logs/DiagnosticReports`. Odczyt idzie przez interfejsy systemu i stałą listę poleceń systemowych, uruchamianych tylko z określonymi argumentami tylko do odczytu (`CommandExactArgumentsTests`).
+- **Kondycja dysku SSD** – dziennik SMART wbudowanego dysku (zużycie, zapas komórek, temperatura, ilość zapisanych danych, godziny pracy, błędy nośnika) przez interfejs systemu IOKit, tylko do odczytu i bez hasła administratora. Numeru seryjnego dysku program nie odczytuje (`SSDHealthTests`, `SSDHealthLiveTests`).
+- **Przeglądarki** (zakładka Ochrona → Przeglądarki) – tylko rozmiary plików historii i ciasteczek oraz pamięci podręcznej Safari, Chrome, Brave, Edge, Arc, Vivaldi i Firefoksa. Program nie czyta odwiedzanych adresów ani ciasteczek, niczego nie usuwa i nie zagląda do kontenera Safari (`BrowserPrivacyTests`).
 - **Działające programy** – żeby nie wyczyścić pamięci podręcznej programu, który właśnie pracuje, MacCare sprawdza listę procesów Twojego konta. Odczytuje przy tym argumenty wywołania **każdego** z tych procesów, ale zachowuje z nich wyłącznie nazwy rozpoznanych narzędzi deweloperskich (np. npm, cargo, xcodebuild). Zmiennych środowiskowych procesów nie analizuje. Niczego z tego nie zapisuje ani nie wysyła (`ToolActivityTests`).
 - **Zainstalowane aplikacje** – foldery Programy oraz systemową bazę aplikacji (LaunchServices), żeby nie uznać za pozostałość danych aplikacji zainstalowanej w innym miejscu.
 - **Pliki w chmurze** (iCloud, Dropbox i podobne) – program nigdy nie wywołuje ich pobierania. Plik nieobecny na dysku jest pomijany i oznaczany jako nieodczytany (`PathPolicyHardeningTests`).
 
 ## Co program zapisuje (tylko na Twoim Macu)
 W folderze `~/Library/Application Support/MacCare AI`:
-- `history.sqlite` – historia skanów, wykryte problemy, próbki pomiarów (po 7 dniach zagęszczane), dziennik operacji, pomiary przed i po operacjach oraz ustawienia. Ścieżki w katalogu domowym są we wszystkich tabelach zapisywane z „~” zamiast nazwy konta (`HistoryRedactionTests`). Jeśli baza się uszkodzi, uszkodzony plik zostaje obok jako `history.sqlite.corrupt-…`.
+- `history.sqlite` – historia skanów, wykryte problemy, próbki pomiarów (po 7 dniach zagęszczane; wpisy starsze niż ok. 13 miesięcy, a dziennik operacji – niż 2 lata, są usuwane: `retentionPrunesOnlyOldRowsAndKeepsReclaimedTotal`), dziennik operacji, pomiary przed i po operacjach oraz ustawienia. Ścieżki w katalogu domowym są we wszystkich tabelach zapisywane z „~” zamiast nazwy konta (`HistoryRedactionTests`). Jeśli baza się uszkodzi, uszkodzony plik zostaje obok jako `history.sqlite.corrupt-…`.
+- `apps-cache.json` – zapamiętane rozmiary aplikacji, żeby ich lista pojawiała się od razu (ścieżki z „~”). Rozmiar jest liczony od nowa, gdy aplikacja się zmieni (`appSizesAreRememberedUntilTheBundleChanges`).
 - `diskmap-cache.lzfse` – zapamiętane rozmiary folderów, żeby mapa dysku pojawiała się od razu po uruchomieniu (ścieżki z „~”).
 - `bench` – chwilowy folder pomiaru szybkości plików przy operacjach w Edycji. Pliki pomiaru są usuwane od razu po pomiarze.
 - `quarantine` – elementy przeniesione do kwarantanny. Ta droga jest dziś wyłączona, bo Porządki przenoszą do Kosza. Trwałe usuwanie z kwarantanny jest dziś niedostępne nawet w trybie Edycja (`expiredQuarantineIsNotPurgedOnStartupInReadOnly`).
@@ -45,7 +48,7 @@ Asystent działa wyłącznie lokalnie: przez Ollamę na Twoim Macu, z modelem ur
 W tej wersji aplikacja nie ma eksportu raportu. Gdy powstanie, ten opis zostanie uzupełniony.
 
 ## Uprawnienia
-- **Powiadomienia** – opcjonalne, domyślnie wyłączone. Po włączeniu w Ustawieniach macOS raz zapyta o zgodę. MacCare pokazuje wtedy lokalne powiadomienia tylko o małej ilości miejsca, krytycznym problemie w Ochronie i nowej wersji. Każdy rodzaj pojawia się najwyżej raz na dobę i nic nie jest wysyłane poza Maca (`ImportantNotifierTests`).
+- **Powiadomienia** – opcjonalne, domyślnie wyłączone. Po włączeniu w Ustawieniach macOS raz zapyta o zgodę. MacCare pokazuje wtedy lokalne powiadomienia tylko o małej ilości miejsca, krytycznym problemie w Ochronie i nowej wersji (każdy rodzaj najwyżej raz na dobę), raz w tygodniu podsumowanie „co urosło” oraz wynik automatycznego Smart Scan, jeśli go włączysz w Ustawieniach (domyślnie wyłączony; działa tylko, gdy MacCare jest uruchomiony, i niczego nie usuwa). Nic nie jest wysyłane poza Maca (`ImportantNotifierTests`, `WeeklyFeaturesAppTests`).
 - **Pełny dostęp do dysku** – opcjonalny. Bez niego część folderów (np. Poczta, Safari) jest pomijana, a wynik oznaczony jako niepełny.
 - **Hasło administratora** – podajesz je tylko w systemowym oknie macOS, gdy sam poprosisz o szczegółowe czujniki (jednorazowy odczyt `powermetrics`). Hasło nie trafia do programu i nie jest zapisywane.
 

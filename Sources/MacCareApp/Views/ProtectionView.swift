@@ -7,7 +7,7 @@ struct ProtectionView: View {
     @EnvironmentObject private var live: LiveMetrics                                // dane na żywo – przeliczanie tylko tego widoku
     @EnvironmentObject var model: AppModel
     @State private var tab = Tab.overview
-    enum Tab: String, CaseIterable { case overview = "Przegląd", startup = "Autostart", ports = "Porty", crashes = "Awarie" }
+    enum Tab: String, CaseIterable { case overview = "Przegląd", startup = "Autostart", ports = "Porty", crashes = "Awarie", browsers = "Przeglądarki" }
 
     var body: some View {
         switch model.phase(.protection) {
@@ -37,12 +37,13 @@ struct ProtectionView: View {
                 ResultHeader(module: .protection, title: issueCount == 0 ? (somethingUnknown ? String(localized: "Nic niepokojącego w odczytanych danych – części nie udało się odczytać") : String(localized: "Nic niepokojącego nie znaleziono")) : Plural.counted(issueCount, one: "sprawa do sprawdzenia", few: "sprawy do sprawdzenia", many: "spraw do sprawdzenia"),
                              subtitle: simple ? String(localized: "Sprawdziliśmy najważniejsze zabezpieczenia Twojego Maca. MacCare niczego nie zmienia.")
                                               : String(localized: "Pokazujemy fakty i dowody. MacCare niczego nie wyłącza ani nie usuwa.")) { model.restart(.protection) }
-                if !simple { SegmentedSwitch(selection: $tab, options: Tab.allCases, title: { $0.title }, module: .protection, width: 460, accessibilityName: String(localized: "Sekcja ochrony")) }
+                if !simple { SegmentedSwitch(selection: $tab, options: Tab.allCases, title: { $0.title }, module: .protection, width: 580, accessibilityName: String(localized: "Sekcja ochrony")) }
                 switch simple ? Tab.overview : tab {
                 case .overview: overview
                 case .startup: startup
                 case .ports: ports
                 case .crashes: crashes
+                case .browsers: browsers
                 }
             }
             .padding(.horizontal, 36).padding(.vertical, 20)
@@ -126,6 +127,15 @@ struct ProtectionView: View {
     private var startup: some View {
         SurfaceCard(padding: 0, radius: 24) {
             VStack(spacing: 0) {
+                // 17.10 (decyzja właściciela): MacCare niczego tu nie wyłącza – otwiera właściwe miejsce w Ustawieniach systemowych.
+                HStack(alignment: .center, spacing: 12) {
+                    Text("Elementy uruchamiane przy logowaniu i działające w tle wyłączysz w Ustawieniach systemowych → Ogólne → Elementy logowania i rozszerzenia. MacCare sam niczego nie wyłącza.")
+                        .font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary).fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                    Button { model.openLoginItemsSettings() } label: { Label("Otwórz Ustawienia", systemImage: "gearshape") }.buttonStyle(.soft)
+                }
+                .padding(.horizontal, 18).padding(.vertical, 12)
+                Divider().opacity(0.3)
                 if items.isEmpty { Text(startupKnown ? String(localized: "Brak elementów autostartu spoza Apple.") : String(localized: "Listy autostartu jeszcze nie odczytano albo odczyt się nie udał.")).padding(20).foregroundStyle(Theme.Palette.textSecondary) }
                 ForEach(items.sorted { ($0.programMissing ? 0 : 1, $0.label) < ($1.programMissing ? 0 : 1, $1.label) }) { i in
                     HStack(alignment: .top, spacing: 12) {
@@ -142,16 +152,61 @@ struct ProtectionView: View {
                             }
                         }
                         Spacer()
-                        if i.scope == .userAgent {
-                            Button(model.readOnly ? String(localized: "Podgląd wyłączenia") : String(localized: "Wyłącz…")) { Task { await model.propose(ToolCall(name: "disable_launch_agent", arguments: ["label": .string(i.label)])) } }
-                                .buttonStyle(.soft).help(model.readOnly ? model.previewHint : "")
-                        }
+
                     }
                     .padding(.horizontal, 18).padding(.vertical, 10)
                     Divider().opacity(0.3)
                 }
             }
         }
+    }
+
+    // MARK: Przeglądarki (17.10, decyzja właściciela: tylko podgląd i informacja)
+    private var browsers: some View {
+        VStack(spacing: 12) {
+            SurfaceCard(radius: 24) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Prywatność przeglądarek").font(Theme.Typo.title).foregroundStyle(Theme.Palette.text)
+                    Text("Ile miejsca zajmują historia, ciasteczka i pamięć podręczna przeglądarek. MacCare tylko pokazuje rozmiary – nie czyta odwiedzanych adresów ani ciasteczek i niczego nie usuwa. Czyszczenie historii i ciasteczek jest nieodwracalne i wyloguje Cię ze stron, dlatego zrób to w samej przeglądarce.")
+                        .font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary).fixedSize(horizontal: false, vertical: true)
+                }.frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if let list = model.browserPrivacy {
+                if list.isEmpty { Text("Nie znaleziono danych znanych przeglądarek.").foregroundStyle(Theme.Palette.textSecondary).padding(20) }
+                ForEach(list) { b in
+                    SurfaceCard(radius: 20) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text(b.name).font(Theme.Typo.headline).foregroundStyle(Theme.Palette.text)
+                                if b.profiles > 1 { Pill(text: Plural.counted(b.profiles, one: "profil", few: "profile", many: "profili"), color: Theme.Palette.textSecondary) }
+                                Spacer()
+                            }
+                            HStack(spacing: 18) {
+                                browserFact(String(localized: "Historia"), b.historyBytes)
+                                browserFact(String(localized: "Ciasteczka"), b.cookiesBytes, note: b.engine == .safari ? String(localized: "w kontenerze Safari – nie sprawdzamy") : nil)
+                                browserFact(String(localized: "Pamięć podręczna"), b.cacheBytes)
+                            }
+                            if b.engine == .safari && b.historyBytes == nil {
+                                Text("Bez pełnego dostępu do dysku macOS nie pozwala odczytać danych Safari.").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textTertiary)
+                            }
+                            Label(b.clearHint, systemImage: "info.circle").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary).fixedSize(horizontal: false, vertical: true)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            } else {
+                ProgressView().padding(20)
+            }
+        }
+        .task { if model.browserPrivacy == nil { await model.loadBrowserPrivacy() } }
+    }
+
+    private func browserFact(_ label: String, _ bytes: UInt64?, note: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary)
+            Text(bytes.map { ByteFormat.string($0) } ?? (note == nil ? String(localized: "nie wiadomo") : "—")).font(Theme.Typo.body.monospacedDigit().weight(.semibold)).foregroundStyle(Theme.Palette.text)
+            if let note, bytes == nil { Text(note).font(.system(size: 10.5)).foregroundStyle(Theme.Palette.textTertiary) }
+        }
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: Porty

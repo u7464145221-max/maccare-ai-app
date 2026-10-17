@@ -302,6 +302,7 @@ struct SettingsView: View {
                 MenuBarSettings()
                 UpdateSettings(updates: model.updates)
                 NotificationSettings(notifier: model.notifier)                                  // audyt 2 (3.13): usunięta nieaktualna karta „powiadomienia w kolejnej wersji”
+                SmartScanScheduleSettings(model: model)                                         // 17.10: harmonogram Smart Scan (decyzja właściciela)
             }
             .frame(maxWidth: 720, alignment: .leading).padding(36).frame(maxWidth: .infinity)
         }

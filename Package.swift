@@ -20,8 +20,11 @@ let package = Package(
                        providers: [.apt(["libsqlite3-dev"]), .brew(["sqlite"])]),
         // Rdzeń niezależny od platformy: modele, reguły, polityki, agent, executor, historia.
         .target(name: "MacCareCore", dependencies: ["CSQLite"], swiftSettings: strictConcurrency),
+        // Kondycja dysku NVMe (SMART) – tylko odczyt przez IOKit (18.10, decyzja właściciela).
+        .target(name: "CNVMeSMART", linkerSettings: [.linkedFramework("IOKit", .when(platforms: [.macOS])),
+                                                     .linkedFramework("CoreFoundation", .when(platforms: [.macOS]))]),
         // Pomiary i operacje specyficzne dla macOS (IOKit, Mach, Security, launchd…).
-        .target(name: "MacCareSystem", dependencies: ["MacCareCore"], swiftSettings: strictConcurrency,
+        .target(name: "MacCareSystem", dependencies: ["MacCareCore", "CNVMeSMART"], swiftSettings: strictConcurrency,
                 linkerSettings: [.linkedFramework("IOKit", .when(platforms: [.macOS])),
                                  .linkedFramework("Security", .when(platforms: [.macOS]))]),
         // Dostawcy modeli językowych i orkiestracja asystenta.

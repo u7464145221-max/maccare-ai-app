@@ -19,7 +19,7 @@ struct AssistantView: View {
                     }
                     .padding(16)
                 }
-                .onChange(of: store.entries.count) { _, _ in if let last = store.entries.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } }
+                .onChange(of: store.entries.count) { _, _ in if let last = store.entries.last { Motion.perform { proxy.scrollTo(last.id, anchor: .bottom) } } }
             }
             .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Theme.Palette.stroke, lineWidth: 1))

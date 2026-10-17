@@ -66,9 +66,11 @@
 %lld różnych programów
 %lld wskazanych identyfikatorów nie istnieje w kwarantannie.
 %lld%%
+%lld%% (próg %lld%%)
 %lld%% (ładowanie)
 %lld/100
 %lld× · %@ · ostatni %@
+%llu h
 , migawek: %lld
 - %@: CPU %lld%%, pamięć %@, procesów %lld%@ [dowód: proc.%@.%@]
 . To tylko podgląd – nic nie zostanie zmienione.
@@ -126,6 +128,7 @@ Automatyczne aktualizacje
 Automatyczne sprawdzanie aktualizacji
 Automatyczne usunięcie po 7 dniach
 Automatycznie (zalecane)
+Automatyczny Smart Scan
 Automatyczny powrót do odczytu po bezczynności
 Automatyzacja
 Autoryzacja Google OAuth
@@ -139,14 +142,17 @@ Bateria
 Bateria i temperatura
 Bateria się zużywa
 Baza historii była uszkodzona. Zachowałem ją jako „%@” w katalogu danych MacCare i założyłem nową – wcześniejsza historia i ustawienia nie są widoczne.
+Bez pełnego dostępu do dysku macOS nie pozwala odczytać danych Safari.
 Bez tego uprawnienia macOS nie pozwala zajrzeć do części folderów (np. Poczta, Safari, kontenery innych aplikacji). Ich rozmiary nie są liczone na mapie dysku ani w porządkach – foldery bez dostępu są oznaczane jako „skan niepełny”. Uprawnienie jest opcjonalne i nie wpływa na ocenę zdrowia.
 Bezpieczeństwo
 Bezpieczne – dane odtworzą się automatycznie.
+Bezpiecznie do odzyskania: %@.
 Biblioteka Zdjęć/Muzyki/TV – elementy usuwa się z poziomu aplikacji Apple
 Biblioteka aplikacji Muzyka – elementy usuwa się z poziomu aplikacji Apple
 Brak
 Brak (odczyt)
 Brak aplikacji spełniających kryteria.
+Brak danych SMART – dysk ich nie udostępnia albo odczyt się nie udał.
 Brak danych – uruchom skan.
 Brak danych.
 Brak dostępu do %lld lokalizacji (uprawnienia) – pominięto, nie ukryto.
@@ -178,6 +184,7 @@ Bun – pamięć podręczna
 Bąbelki
 BŁĄD: %@
 Błąd: %@
+Błędy nośnika SSD
 CPU > 90% w chwili pomiaru
 CPU to wartość chwilowa z jednego okresu próbkowania.
 Cache CoreSimulator.
@@ -193,19 +200,24 @@ Cel
 Cel zmienił się po sprawdzeniu albo leży poza %@ – nic nie ruszono: %@
 Cel zmienił się po sprawdzeniu albo leży poza dozwolonymi miejscami (%@) – nic nie ruszono: %@
 Certyfikat spoza łańcucha Apple
+Ciasteczka
 Ciśnienie pamięci
 Ciśnienie pamięci (0–2)
 Co najbardziej obciąża Maca
+Co tydzień
+Co urosło w tym tygodniu
 Co warto sprawdzić
 Co zajmuje najwięcej miejsca na dysku?
 Co zostanie uruchomione
 CocoaPods – pamięć podręczna
+Codziennie
 Coś wymaga pilnej uwagi.
 Coś wymaga uwagi
 Cursor – pamięć podręczna
 Cykle ładowania
 Czas bezczynności do powrotu do odczytu
 Czas operacji na małych plikach
+Czas pracy dysku SSD
 Czas stałego zadania CPU
 Czekam na odczyt (okno hasła systemu)…
 Czy w autostarcie jest coś niepokojącego?
@@ -241,6 +253,7 @@ Dlaczego mój Mac może zwalniać?
 Dlaczego?
 Do odzyskania ok. %@. Miejsce z kwarantanny wraca po jej opróżnieniu (automatycznie po 7 dniach).
 Do przejrzenia – sprawdź, czy nie są Ci potrzebne.
+Do sprawdzenia: %lld.
 Dobry
 Docker Desktop – stare logi
 Dokumenty
@@ -263,7 +276,15 @@ Duplikaty – pliki o identycznej treści (≥ 1 MB)
 Duże pliki
 Duże użycie pliku wymiany (swap)
 Dysk
+Dysk SSD
+Dysk SSD zarejestrował błędy nośnika (%llu)
+Dysk SSD zgłasza ostrzeżenie sprzętowe
+Dysk SSD zużyty w %lld%%
+Dysk działa prawidłowo.
 Dysk jest prawie pełny.%@ Warto zwolnić trochę miejsca.
+Dysk zapełnia się powoli.
+Dysk zgłasza problem – zrób kopię zapasową.
+Działa, gdy MacCare jest uruchomiony (także tylko jako ikona w pasku menu) i nie korzystasz akurat z jego okna. Wyłącznie sprawdza – niczego nie usuwa. Podsumowanie przychodzi jako powiadomienie, jeśli powiadomienia są włączone. Pomijany w trybie Edycja, w trybie niskiego zużycia energii i gdy masz zaznaczone elementy w Porządkach.
 Dziennik jest pusty
 Dziennik operacji
 Dzienniki
@@ -286,6 +307,7 @@ Element w tle (BTM)
 Elementy (%lld)
 Elementy trafiły do kwarantanny (przeniesienie w obrębie dysku) lub do Kosza – wolne miejsce zwiększy się dopiero po opróżnieniu kwarantanny (automatycznie po 7 dniach) lub Kosza. Pomiar obejmuje też inne zapisy na dysku.
 Elementy trafiły do systemowego Kosza (przeniesienie w obrębie dysku) – wolne miejsce zwiększy się dopiero po opróżnieniu Kosza w Finderze. Możesz je stamtąd przywrócić (Odłóż).
+Elementy uruchamiane przy logowaniu i działające w tle wyłączysz w Ustawieniach systemowych → Ogólne → Elementy logowania i rozszerzenia. MacCare sam niczego nie wyłącza.
 Elementy w katalogu tymczasowym nieużywane od 3 dni. Długo działające programy mogą tu trzymać blokady i gniazda – dlatego nie są zaznaczane same.
 Elementy z kwarantanny przywrócisz w Historii; elementy z Kosza – z Findera (%lld).
 Elementów Apple nie można wyłączyć.
@@ -296,6 +318,7 @@ FileVault wyłączony
 Filtr
 Finder
 Firefox – pamięć podręczna
+Firefox → Ustawienia → Prywatność i bezpieczeństwo → Ciasteczka i dane stron / Historia → Wyczyść.
 Folder pierwszego poziomu katalogu domowego jako całość – zaznacz jego zawartość element po elemencie
 Folder wskazany przez użytkownika
 Folder: %@ · bez danych programów, projektów i bibliotek. Szukanie tylko czyta pliki.
@@ -321,6 +344,7 @@ Identyfikator
 Identyfikator „%@” nie występuje wśród aktualnych pomiarów. Wniosek opiera się na danych, których panel nie potrafi teraz pokazać.
 Identyfikatory wpisów kwarantanny
 Ikona w pasku menu
+Ile miejsca zajmują historia, ciasteczka i pamięć podręczna przeglądarek. MacCare tylko pokazuje rozmiary – nie czyta odwiedzanych adresów ani ciasteczek i niczego nie usuwa. Czyszczenie historii i ciasteczek jest nieodwracalne i wyloguje Cię ze stron, dlatego zrób to w samej przeglądarce.
 Indeks odbuduje się sam – nie da się go „przywrócić”, ale nie tracisz danych.
 Indeks zostanie usunięty i zbudowany od nowa. Do tego czasu wyszukiwanie będzie niepełne, a mds będzie używać CPU.
 Indeksowanie potrwa od kilkunastu minut do kilku godzin i chwilowo zwiększy obciążenie.
@@ -446,6 +470,7 @@ Na Twoim Macu jest %@ danych do odzyskania
 Na dysku jest %lld lokalnych migawek, a %@ liczy się jako „do odzyskania przez system”. Usunięcie plików objętych migawką nie zwiększy wolnego miejsca, dopóki migawki nie wygasną (zwykle do 24 godz.) – dlatego sprzątanie pamięci podręcznej bywa tu mało skuteczne. macOS zwalnia je sam, gdy brakuje miejsca.
 Na dysku startowym zostało %@ (%lld%%). 
 Nadal zablokowane – dostępne po zakończeniu poprawek bezpieczeństwa kwarantanny
+Najbardziej urosły: %@.
 Najwięksi konsumenci
 Największe pliki
 Największe pliki (≥ 500 MB, bez ~/Library)
@@ -466,6 +491,7 @@ Nic nie zaznaczono.
 Nic nie zostanie usunięte: MacCare nie może odczytać zawartości Kosza (uprawnienia lub Pełny dostęp do dysku).
 Nic nie zostanie wykonane przed kliknięciem „%@”.
 Nic nie zostanie zmienione.
+Nic nie zostało usunięte.
 Nic niepokojącego nie znaleziono
 Nic niepokojącego nie znaleziono.
 Nic niepokojącego w odczytanych danych – części nie udało się odczytać
@@ -496,6 +522,7 @@ Nie zmienia ustawień.
 Nie znaleziono agenta „%@” w %@.
 Nie znaleziono danych do usunięcia.
 Nie znaleziono danych tej aplikacji w ~/Library.
+Nie znaleziono danych znanych przeglądarek.
 Nie znaleziono duplikatów wśród %@.
 Nie znaleziono modeli Ollamy (aplikacja Ollama nie działa albo nie ma pobranych modeli).
 Nie znaleziono nic do usunięcia w znanych lokalizacjach.
@@ -526,10 +553,12 @@ Obciążenie i pamięć
 Obciążenie utrzymuje się od %lld s – to nie jest chwilowy skok.
 Obrazy
 Obrazy dysków
+Ocena %lld/100.
 Ocena bez potrąceń, ale %@ uwagi – szczegóły poniżej.
 Ocena stanu
 Ocena stanu: %lld/100
 Ocena stanu: %lld/100 – z jawną metodologią i dowodami.
+Ocena: brak danych.
 Ochrona
 Ochrona integralności systemu (SIP)
 Ochrona integralności systemu (SIP) jest wyłączona
@@ -586,10 +615,12 @@ Opróżnij całą kwarantannę…
 Opróżniono Kosz: %@. Nieusuniętych: %lld.
 OrbStack – stare logi
 Osierocony element autostartu: %@
+Ostatni Smart Scan: %@
 Ostatnie udane sprawdzenie: %@. Lista oczekujących aktualizacji może być nieaktualna.
 Ostatnio: %@
 Ostrzeżenia
 Ostrzeżenie
+Ostrzeżenie sprzętowe SSD
 Oto, co najbardziej obciąża Twojego Maca.
 Otwarte porty
 Otwarto panel ustawień.
@@ -598,6 +629,7 @@ Otwiera Ustawienia systemowe → Prywatność i ochrona → Pełny dostęp do dy
 Otwiera właściwy panel Ustawień systemowych (użytkownik sam zmienia ustawienie).
 Otwórz MacCare
 Otwórz Uaktualnienia
+Otwórz Ustawienia
 Otwórz folder
 Otwórz folder %@
 Otwórz folder na mapie
@@ -643,7 +675,6 @@ Podgląd opróżnienia kwarantanny
 Podgląd przeniesienia do Kosza
 Podgląd przywrócenia
 Podgląd usunięcia zaznaczonych
-Podgląd wyłączenia
 Podgląd zmian
 Podobne zdjęcia
 Podobne zdjęcia (JPEG, HEIC, PNG…, od 100 KB)
@@ -653,6 +684,7 @@ Podpis spoza Apple
 Podpisy aplikacji
 Podwyższona temperatura
 Podwyższone ciśnienie pamięci
+Pojedyncze błędy nie muszą oznaczać awarii, ale warto mieć aktualną kopię zapasową i obserwować, czy liczba rośnie.
 Pojedynczy pomiar – może to być chwilowa praca (np. indeksowanie, eksport). Obserwuję dalej.
 Pojemność baterii jest już niższa niż na początku. Rozważ wizytę w serwisie, jeśli działa za krótko.
 Pojemność baterii spadła do %lld%%
@@ -726,12 +758,14 @@ Prostokąty
 Prosty
 Prosty – stan Maca jednym słowem, trzy najważniejsze rekomendacje bez żargonu, bez identyfikatorów, ścieżek i numerów procesów. Operacje o średnim i wysokim ryzyku są niedostępne.
 Prosty: najważniejsze rzeczy bez żargonu. Profesjonalny: pełne dane, dowody i szczegóły techniczne.
+Prywatność przeglądarek
 Przeanalizuj raporty
 Przebieg (%@)
 Przebudowa indeksu Spotlight
 Przebudowa indeksu jest dostępna tylko dla dysku startowego (/).
 Przed i po
 Przegląd
+Przeglądarki
 Przeglądarki testowe. `npx playwright install` pobierze je ponownie.
 Przejdź do Moje pliki
 Przejdź do trybu Profesjonalnego
@@ -766,6 +800,8 @@ Przenosi zaznaczone zdjęcia do Kosza macOS – przywrócisz je w Finderze.
 Przerwano.
 Przerywa skan. Wynik będzie oznaczony jako niepełny.
 Przy małej ilości miejsca macOS ogranicza pamięć wirtualną i kopie lokalne, co może spowalniać system.
+Przy obecnym tempie miejsce skończy się w ciągu doby.
+Przy obecnym tempie miejsce skończy się za ok. %@.
 Przywraca elementy z kwarantanny na oryginalne miejsce.
 Przywrócenie z kwarantanny
 Przywrócono %lld. Błędy: %lld.
@@ -792,12 +828,14 @@ Rozumiem: %@
 Ryzyko: %@
 SIP chroni pliki systemowe przed modyfikacją. Włączenie wymaga trybu Recovery (csrutil enable) – MacCare nie robi tego automatycznie.
 SIP wyłączony
+Safari → Historia → Wyczyść historię…; ciasteczka: Safari → Ustawienia → Prywatność → Zarządzaj danymi witryn…
 Sekcja historii
 Sekcja ochrony
 Serwery DNS (scutil --dns): %@; konfiguracji resolverów: %lld.
 Sieć
 Silnik reguł nie wykrył problemów.
 Silnik reguł…
+Skan był niepełny – część miejsc nie została sprawdzona.
 Skan czyszczenia
 Skan czyszczenia (kategoria)
 Skan czyszczenia…
@@ -812,6 +850,7 @@ Skany mogą być niepełne: brak Pełnego dostępu do dysku
 Slack – pamięć podręczna
 Smart Scan
 Smart Scan niczego nie zmienia – tylko sprawdza.
+Smart Scan – podsumowanie
 Sortuj
 Spodziewany efekt
 Spotify – utwory w pamięci podręcznej
@@ -827,7 +866,7 @@ Sprawdź stan zabezpieczeń, autostart i podpisy programów. Pokazujemy fakty i 
 Sprawy do sprawdzenia
 Spróbuj ponownie
 Stabilność
-Stan Maca w skrócie (procesor, pamięć, wolne miejsce, aktualizacje) i szybki Smart Scan. Tylko odczyt.
+Stan Maca w skrócie: wykresy procesora i pamięci z ostatnich minut, wolne miejsce z ostrzeżeniem, gdy dysk szybko się zapełnia, aktualizacje i szybki Smart Scan. Tylko odczyt.
 Stan Maca: %@
 Stan baterii wg systemu
 Stan okien
@@ -873,6 +912,7 @@ Ta operacja jest dostępna w trybie Profesjonalnym.
 Także pliki w chmurze – usunie je też z chmury (%lld)
 Temperatura
 Temperatura baterii
+Temperatura dysku SSD
 Temperatury poszczególnych rdzeni są niedostępne bez prywatnych interfejsów systemu – nie zgadujemy. Próbka z %@.
 Ten Mac nie ma baterii lub system nie udostępnia danych.
 Ten moduł jest w budowie – funkcja nie jest jeszcze dostępna.
@@ -883,6 +923,7 @@ To ostatnia niezaznaczona kopia – jedna musi zostać
 To ostatnie niezaznaczone zdjęcie z grupy – jedno musi zostać
 To samo w sobie nie jest błędem. Restart instaluje oczekujące poprawki i zwalnia swap – rozważ go, jeśli masz inne objawy.
 To spowalnia pracę. Pomoże zamknięcie dużych aplikacji albo restart.
+To szacunek producenta dotyczący liczby zapisów. Dysk może działać dłużej, ale kopia zapasowa jest tu szczególnie ważna.
 To urządzenie nie obsługuje Apple Intelligence.
 To wyłącznie odczyt: próbka trwa ok. 1 sekundy i niczego nie zmienia w systemie.
 Transfer dysku (odczyt/zapis)
@@ -920,7 +961,7 @@ Tylko odczyt: MacCare niczego nie zmienia w systemie. „Edycja” odblokowuje w
 Tylko raporty użytkownika w ~/Library/Logs/DiagnosticReports.
 Tylko wpisy pierwszego poziomu w Application Support, pamięci podręcznej, Preferencjach, Kontenerach i Stanie okien, nazwane identyfikatorem aplikacji, której nie ma i która nie działa; zawsze do Kosza.
 Tylko znane reguły; brak wniosku ≠ brak problemu.
-Tylko: mało miejsca na dysku (poniżej 10 GB), krytyczny problem w Ochronie i nowa wersja MacCare (gdy sprawdzanie aktualizacji ją znajdzie). Każdy rodzaj najwyżej raz na dobę; nic nie jest wysyłane poza Twojego Maca.
+Tylko: mało miejsca na dysku (poniżej 10 GB), krytyczny problem w Ochronie, nowa wersja MacCare (gdy sprawdzanie aktualizacji ją znajdzie), raz w tygodniu „co urosło” oraz wynik automatycznego Smart Scan (gdy go włączysz). Ważne sprawy – najwyżej raz na dobę; nic nie jest wysyłane poza Twojego Maca.
 Typy zdarzeń: %@. Ostatnie: %@. Przyczynę może wyjaśnić analiza raportu – poproś asystenta.
 Uprawnienie nie jest zapamiętywane i nie powstają żadne usługi pomocnicze – przy następnym odczycie zapytam znowu.
 Uruchamiane automatycznie programy z katalogu domowego lub Homebrew nie mają zaufanego podpisu – to typowe dla własnych skryptów i środowisk deweloperskich, a nie dla złośliwego oprogramowania. Pierwsze: %@%@.
@@ -945,6 +986,9 @@ VS Code – pamięć podręczna
 W /Applications czyszczone są tylko instalatory macOS
 W Finderze: Kosz → zaznacz element → Odłóż (Put Back). Nic nie jest usuwane na stałe.
 W normie
+W przeglądarce: Ustawienia → Prywatność i bezpieczeństwo → Usuń dane przeglądania (⌘⇧⌫).
+W tym tygodniu przybyło ok. %@ wolnego miejsca.
+W tym tygodniu ubyło ok. %@ wolnego miejsca.
 WYNIK NARZĘDZIA:
 Waga
 Wagi modeli pobrane przez torch.hub.
@@ -968,6 +1012,7 @@ Wolne < 5%
 Wolne miejsce (dysk startowy)
 Wolne miejsce na dysku
 Wolne na dysku
+Wolnego miejsca nie ubywa.
 Wpis kwarantanny wskazuje poza jej katalog (uszkodzony lub podmieniony manifest) – nic nie ruszono: %@
 Wpisy w ~/Library nazwane identyfikatorem aplikacji, której system nie zna – ani w folderach Programy, ani w innym miejscu. To heurystyka: część może należeć do narzędzi bez aplikacji (np. wiersz poleceń) – sprawdź przed usunięciem. Dane aplikacji (Application Support, kontenery) zaznaczasz osobno.
 Wskazane dowody nie istnieją (%@) – przypuszczenie.
@@ -985,6 +1030,7 @@ Wydajność
 Wydajność wygląda dobrze
 Wyjątek: %@%@%@
 Wykonano automatycznie (zatwierdzona czynność): %@
+Wykres: %@, ostatnie minuty
 Wykryte problemy
 Wymaga hasła administratora (okno systemowe).
 Wymaga uwagi
@@ -1012,7 +1058,7 @@ Wyłączenie autostartu
 Wyłączenie autostartu %@
 Wyłączone: %@.
 Wyłączono tryb Edycja – powrót do trybu tylko do odczytu.
-Wyłącz…
+Wyłączony
 Wątek %@, górne ramki:
 Włącz Apple Intelligence w Ustawieniach systemowych.
 Włącz edycję
@@ -1053,6 +1099,8 @@ Zamknięcie aplikacji
 Zamknięcie aplikacji %@
 Zamknięcie jej odciąży Maca.
 Zamyka podgląd i pokazuje potwierdzenie trybu Edycja.
+Zapas komórek SSD
+Zapisano na dysk SSD
 Zapora aplikacji
 Zapora aplikacji jest wyłączona
 Zapora sieciowa
@@ -1103,6 +1151,8 @@ Zniknęło od %@: %@ · %@
 Zobacz, co obciąża procesor, pamięć i baterię – i czy powodem jest aplikacja, czy system.
 Zostało %@. Porządki w MacCare pokażą, co można bezpiecznie przenieść do Kosza.
 Zrzuty stron na dysk
+Zrób kopię zapasową (Time Machine) i skontaktuj się z serwisem Apple. Zapas komórek: %lld%% (próg %lld%%).
+Zużycie dysku SSD
 Zwolnienie CPU/pamięci
 Zwolnienie miejsca na dysku
 Zwolnienie miejsca po odinstalowanych aplikacjach
@@ -1130,11 +1180,13 @@ do 14B parametrów (np. qwen2.5:14b)
 do 32B parametrów (np. qwen2.5:32b)
 do 3B parametrów (np. qwen2.5:3b, llama3.2:3b)
 do 8B parametrów (np. qwen2.5:7b, llama3.1:8b)
+do obserwacji
 do odzyskania
 do odzyskania %@
 do odzyskania ≈ %@
 do przejrzenia
 dobra
+dobra kondycja
 dolna granica – bez uprawnień widać tylko procesy użytkownika
 dostęp do prywatnych danych
 element już nie istnieje (zmieniony od chwili zaznaczenia)
@@ -1197,16 +1249,19 @@ przyznany
 różne obciążenie tła (%lld%% → %lld%%)
 system nie udostępnia kondycji
 słaba
+tak (kod %lld)
 trwale
 tryb Edycja wygasł – nic nie ruszono
 tło – nie wlicza się do oceny
 ustaleń: %lld
 usług nasłuchuje z sieci
 używana dziś
+w kontenerze Safari – nie sprawdzamy
 waga %lld%%
 wchodzi w skład zaznaczonego folderu – zostanie przeniesiony razem z nim
 wersja %@
 wykonano
+wymaga uwagi
 wyłączone
 włączone
 z %@ zajętych – resztę trzymają migawki lub klony
@@ -1217,6 +1272,7 @@ zabronione
 zajęte %@
 zajęte na dysku
 zakres: %@
+zapisano %@ · %llu h pracy · błędy nośnika: %llu
 zaplanowane
 zaproponował asystent AI
 zasilacz
@@ -1229,6 +1285,7 @@ zmiana ustawień zabezpieczeń
 zmiana zasilania (sieć/bateria) między pomiarami
 zmieniony tuż przed przeniesieniem – nic nie ruszono
 zmierzono %@
+zużycie %lld%%
 Łączne obciążenie wynosi %lld%%. Sprawdź listę procesów – reguła nie wskazuje jednej przyczyny, jeśli żaden proces nie przekracza progu.
 ładowanie
 Ścieżka musi być bezwzględna

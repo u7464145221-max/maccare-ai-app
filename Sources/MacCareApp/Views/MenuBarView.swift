@@ -16,13 +16,38 @@ struct MenuBarView: View {
                 Text(model.stateLabel).font(Theme.Typo.caption.weight(.semibold)).foregroundStyle(model.stateColor)
             }
             Divider()
+            // 17.10 (decyzja właściciela „4 tak”): mini-wykresy ostatnich minut i ostrzeżenie o zapełnianiu dysku. Tylko odczyt.
             ForEach(MenuBarSummary.lines(model), id: \.label) { l in
-                HStack {
-                    Image(systemName: l.symbol).frame(width: 18).foregroundStyle(Theme.Palette.textSecondary)
-                    Text(l.label).font(Theme.Typo.body).foregroundStyle(Theme.Palette.textSecondary)
-                    Spacer()
-                    Text(l.value).font(Theme.Typo.body.monospacedDigit().weight(.semibold)).foregroundStyle(Theme.Palette.text)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Image(systemName: l.symbol).frame(width: 18).foregroundStyle(Theme.Palette.textSecondary)
+                        Text(l.label).font(Theme.Typo.body).foregroundStyle(Theme.Palette.textSecondary)
+                        Spacer()
+                        Text(l.value).font(Theme.Typo.body.monospacedDigit().weight(.semibold)).foregroundStyle(Theme.Palette.text)
+                    }
+                    if let series = l.series, series.count > 1 {
+                        Sparkline(values: series, color: l.symbol == "cpu" ? AppModule.performance.foreground : AppModule.smartScan.foreground, upper: 100)
+                            .frame(height: 26).padding(.leading, 26)
+                            .accessibilityLabel(String(localized: "Wykres: \(l.label), ostatnie minuty"))
+                    }
+                    if let fill = l.fill {
+                        GeometryReader { g in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Theme.Palette.surfaceAlt)
+                                Capsule().fill(model.diskTrend?.isWarning == true ? Theme.Palette.warning : AppModule.files.foreground)
+                                    .frame(width: max(4, g.size.width * CGFloat(min(max(fill, 0), 1))))
+                            }
+                        }.frame(height: 6).padding(.leading, 26)
+                        .accessibilityHidden(true)
+                    }
                 }
+            }
+            if let t = model.diskTrend, t.isWarning {
+                Label(t.summary, systemImage: "exclamationmark.triangle.fill")
+                    .font(Theme.Typo.caption).foregroundStyle(Theme.Palette.warning).fixedSize(horizontal: false, vertical: true)
+            }
+            if let s = model.smartSummary {
+                Text("Ostatni Smart Scan: \(s.date.formatted(date: .abbreviated, time: .shortened))").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textTertiary)
             }
             Divider()
             Button { show(.smartScan); Task { model.restart(.smartScan); await model.smartScan() } } label: { Label("Uruchom Smart Scan", systemImage: "wand.and.stars") }
@@ -49,13 +74,20 @@ enum MenuBarPreference { static let key = "menuBarIcon" }
 
 /// Wiersze podsumowania paska menu – osobno, żeby dało się je przetestować bez widoku.
 enum MenuBarSummary {
-    struct Line { let symbol: String; let label: String; let value: String }
+    struct Line {
+        let symbol: String; let label: String; let value: String
+        /// Mini-wykres (procent 0–100) i zajętość (0–1) – nil, gdy nie dotyczy albo brak pomiaru.
+        var series: [Double]? = nil
+        var fill: Double? = nil
+    }
 
     @MainActor static func lines(_ m: AppModel) -> [Line] {
         var out: [Line] = []
-        out.append(Line(symbol: "cpu", label: String(localized: "Procesor"), value: m.cpuLive.last.map { String(format: "%.0f%%", $0) } ?? "—"))
-        out.append(Line(symbol: "memorychip", label: String(localized: "Pamięć"), value: m.memLive.last.map { String(format: "%.0f%%", $0) } ?? "—"))
-        if let v = m.snapshot?.bootVolume ?? m.bootVolumeQuick { out.append(Line(symbol: "internaldrive", label: String(localized: "Wolne na dysku"), value: ByteFormat.string(v.availableImportant))) }
+        out.append(Line(symbol: "cpu", label: String(localized: "Procesor"), value: m.cpuLive.last.map { String(format: "%.0f%%", $0) } ?? "—", series: m.cpuLive))
+        out.append(Line(symbol: "memorychip", label: String(localized: "Pamięć"), value: m.memLive.last.map { String(format: "%.0f%%", $0) } ?? "—", series: m.memLive))
+        if let v = m.snapshot?.bootVolume ?? m.bootVolumeQuick {
+            out.append(Line(symbol: "internaldrive", label: String(localized: "Wolne na dysku"), value: ByteFormat.string(v.availableImportant), fill: 1 - v.freeFraction))
+        }
         if let u = m.snapshot?.updates {
             out.append(Line(symbol: "arrow.down.circle", label: String(localized: "Aktualizacje Apple"), value: u.pending.isEmpty ? String(localized: "brak") : String(localized: "\(u.pending.count) do instalacji")))
         }
@@ -72,7 +104,7 @@ struct MenuBarSettings: View {
             VStack(alignment: .leading, spacing: 8) {
                 Toggle(isOn: $showMenuBar) { Text("Ikona w pasku menu").font(Theme.Typo.headline).foregroundStyle(Theme.Palette.text) }
                     .toggleStyle(.switch)
-                Text("Stan Maca w skrócie (procesor, pamięć, wolne miejsce, aktualizacje) i szybki Smart Scan. Tylko odczyt.")
+                Text("Stan Maca w skrócie: wykresy procesora i pamięci z ostatnich minut, wolne miejsce z ostrzeżeniem, gdy dysk szybko się zapełnia, aktualizacje i szybki Smart Scan. Tylko odczyt.")
                     .font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary)
             }
         }
