@@ -37,7 +37,7 @@ public enum CodeSignatureChecker {
     private struct CacheEntry { var fingerprint: String; var at: Date; var result: SignatureResult }
     nonisolated(unsafe) private static var cache: [String: CacheEntry] = [:]
     nonisolated(unsafe) private static var _verifications: [String: Int] = [:]
-    static let cacheTTL: TimeInterval = 3600
+    static let cacheTTL: TimeInterval = 24 * 3600                                    // audyt 3: niezmieniony plik (odcisk) – pełna weryfikacja najwyżej raz na dobę
 
     /// Liczba faktycznych weryfikacji Security.framework dla ścieżki (do testów pamięci wyników).
     static func verifications(of path: String) -> Int { queue.sync { _verifications[path] ?? 0 } }

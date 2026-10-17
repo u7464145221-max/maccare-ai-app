@@ -165,11 +165,11 @@ struct AssistantModelSettings: View {
                 Picker("Model", selection: Binding(get: { store.preferredModel ?? "" }, set: { store.preferredModel = $0.isEmpty ? nil : $0 })) {
                     Text("Automatycznie (zalecane)").tag("")
                     ForEach(store.installedModels, id: \.name) { m in
-                        Text("\(m.name) · \(ByteFormat.string(m.sizeBytes))\(store.fitsNow(m) ? "" : " · teraz się nie mieści")").tag(m.name)
+                        Text("\(m.name) · \(ByteFormat.string(m.sizeBytes))\(store.fitsNow(m) ? "" : String(localized: " · teraz się nie mieści"))").tag(m.name)
                     }
                 }
                 .labelsHidden().frame(maxWidth: 520)
-                Text("Modele działają lokalnie przez Ollamę (127.0.0.1) – dane nie opuszczają Maca, a MacCare niczego nie pobiera sam. „Automatycznie” wybiera zainstalowany model, który teraz zmieści się w pamięci (najpierw qwen2.5, potem Bielik).")
+                Text("Modele działają lokalnie przez Ollamę (127.0.0.1) – dane nie opuszczają Maca, a MacCare niczego nie pobiera sam. „Automatycznie” wybiera zainstalowany model, który teraz zmieści się w pamięci (kolejno: qwen2.5, qwen3, Bielik, Llama 3, Mistral, Gemma).")
                     .font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary).fixedSize(horizontal: false, vertical: true)
                 if store.installedModels.isEmpty { Text("Nie znaleziono modeli Ollamy (aplikacja Ollama nie działa albo nie ma pobranych modeli).").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.warning) }
             }

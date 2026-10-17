@@ -114,8 +114,9 @@ public enum AppInventory {
         if let knownSize { size = knownSize } else { size = await Task.detached(priority: .utility) { DiskUsage.measure(r.path).allocated }.value }
         let sig = await CodeSignatureChecker.check(path: r.path, deep: false)
         var arch: [String] = []
-        if let exe = r.executable, let h = FileHandle(forReadingAtPath: r.path + "/Contents/MacOS/" + exe) {
-            arch = architectures(header: (try? h.read(upToCount: 512)) ?? Data()); try? h.close()   // try? świadomie: zamknięcie uchwytu tylko do odczytu
+        // Audyt 3: nazwa pliku z nieufnego Info.plist – bez „/” i „..”, odczyt bez podążania za dowiązaniem, tylko plik zwykły (FIFO nie zawiesi listy).
+        if let exe = r.executable, !exe.isEmpty, !exe.contains("/"), exe != "..", let d = SafeRead.prefix(r.path + "/Contents/MacOS/" + exe, bytes: 512) {
+            arch = architectures(header: d)
         }
         return InstalledApp(name: r.name, bundleID: r.bundleID, version: r.version, path: r.path, size: size, lastUsed: used,
                             signature: sig.status, source: source(path: r.path, signature: sig.status, casks: casks, name: r.name), architectures: arch)

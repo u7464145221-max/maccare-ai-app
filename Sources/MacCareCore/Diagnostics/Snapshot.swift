@@ -233,6 +233,10 @@ public struct CrashReportSummary: Codable, Sendable, Hashable {
 /// (NIE są interpretowane jako „OK” ani karane w ocenie).
 /// Kondycja dysku SSD (NVMe SMART). Tylko liczby z dziennika – bez numeru seryjnego.
 public struct SSDHealth: Codable, Sendable, Equatable {
+    /// Audyt 3: problem sprzętowy wymagający kopii i serwisu – zapas poniżej progu albo bity ostrzeżenia NVMe 0 (zapas), 2 (niezawodność), 3 (tylko odczyt),
+    /// 4 (pamięć ulotna). Bit 1 (temperatura) liczony osobno – jest przejściowy.
+    public var hardwareProblem: Bool { criticalWarning & ~0x02 != 0 || availableSpare < availableSpareThreshold }
+
     /// Zużycie wg producenta (0–100%; może przekroczyć 100 – szacunek resursu zapisów przekroczony).
     public var percentUsed: Int
     /// Zapas komórek zastępczych i próg, poniżej którego dysk zgłasza ostrzeżenie.

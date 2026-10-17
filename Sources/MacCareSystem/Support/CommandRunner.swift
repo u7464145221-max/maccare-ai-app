@@ -12,6 +12,8 @@ public enum CommandRunner {
         init(output: String, status: Int32, timedOut: Bool, truncated: Bool = false) {
             self.output = output; self.status = status; self.timedOut = timedOut; self.truncated = truncated
         }
+        /// Polecenie świadomie pominięte (lekkie odświeżenie) – wynik nieznany, nie „pusty”.
+        static let skipped = Result(output: "", status: -1, timedOut: false)
     }
 
     /// Górna granica odczytanego wyjścia (skill `maccare-command-allowlist`): największe dozwolone wyjście (`lsof`, `system_profiler`) ma kilka kB,
@@ -53,7 +55,7 @@ public enum CommandRunner {
         "/usr/sbin/spctl": [["--status"]],
         "/usr/sbin/softwareupdate": [["--schedule"]],
         "/usr/libexec/ApplicationFirewall/socketfilterfw": [["--getglobalstate"], ["--getstealthmode"]],
-        "/usr/sbin/lsof": [["-iTCP", "-sTCP:LISTEN", "-nP", "-F", "pcn"]],
+        "/usr/sbin/lsof": [["-b", "-w", "-iTCP", "-sTCP:LISTEN", "-nP", "-F", "pcn"]],
         "/usr/sbin/scutil": [["--dns"]],
         "/usr/sbin/system_profiler": [["SPPowerDataType", "-json"]],
     ]

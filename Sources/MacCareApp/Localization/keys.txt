@@ -11,13 +11,15 @@
  Pominięto %lld (nie spełniały zasad bezpieczeństwa lub zmieniły się od zaznaczenia).
  Z tego %@ system może zwolnić sam (purgeable).
  · niemierzalnych procesów systemowych: %lld (bez uprawnień nie widać ich zużycia)
+ · teraz się nie mieści
  · tylko „Przenieś do Kosza” (Moje pliki, Porządki, Aplikacje)
+ · w chmurze
  · zajęte %@ (resztę trzymają migawki lub klony%@)
  · zmiana %@
  – aktualizacja systemu jest szczególnie ważna
 %@ autostartu z lokalnych narzędzi (np. środowiska Python, Homebrew)
 %@ bezczynnie zajmuje %@
-%@ często się zawiesza
+%@ często ulega awarii
 %@ do rozważenia
 %@ mocno obciąża procesor
 %@ obciąża procesor (%lld%%)
@@ -91,7 +93,7 @@ Anulowano w oknie autoryzacji – nic nie zmieniono.
 Anulowano – nic nie zostało odczytane.
 Anuluj
 Aplikacja %@ jest uruchomiona – zamknij ją przed usunięciem.
-Aplikacja często się zawiesza
+Aplikacja często ulega awarii
 Aplikacja działa – zamknij ją i spróbuj ponownie
 Aplikacja i wybrane dane trafią do Kosza – przywrócisz je w Finderze
 Aplikacja nie istnieje albo jest dowiązaniem
@@ -279,12 +281,14 @@ Dysk
 Dysk SSD
 Dysk SSD zarejestrował błędy nośnika (%llu)
 Dysk SSD zgłasza ostrzeżenie sprzętowe
+Dysk SSD zgłasza zbyt wysoką temperaturę
 Dysk SSD zużyty w %lld%%
 Dysk działa prawidłowo.
+Dysk działa, ale warto go obserwować i mieć aktualną kopię zapasową.
 Dysk jest prawie pełny.%@ Warto zwolnić trochę miejsca.
 Dysk zapełnia się powoli.
 Dysk zgłasza problem – zrób kopię zapasową.
-Działa, gdy MacCare jest uruchomiony (także tylko jako ikona w pasku menu) i nie korzystasz akurat z jego okna. Wyłącznie sprawdza – niczego nie usuwa. Podsumowanie przychodzi jako powiadomienie, jeśli powiadomienia są włączone. Pomijany w trybie Edycja, w trybie niskiego zużycia energii i gdy masz zaznaczone elementy w Porządkach.
+Działa, gdy MacCare jest uruchomiony (także tylko jako ikona w pasku menu) i nie korzystasz akurat z jego okna. Wyłącznie sprawdza – niczego nie usuwa. Podsumowanie przychodzi jako powiadomienie, jeśli powiadomienia są włączone. Pomijany w trybie Edycja, w trybie niskiego zużycia energii i gdy sam zmieniłeś zaznaczenie w Porządkach (żeby nie podmienić listy, nad którą pracujesz).
 Dziennik jest pusty
 Dziennik operacji
 Dzienniki
@@ -307,7 +311,7 @@ Element w tle (BTM)
 Elementy (%lld)
 Elementy trafiły do kwarantanny (przeniesienie w obrębie dysku) lub do Kosza – wolne miejsce zwiększy się dopiero po opróżnieniu kwarantanny (automatycznie po 7 dniach) lub Kosza. Pomiar obejmuje też inne zapisy na dysku.
 Elementy trafiły do systemowego Kosza (przeniesienie w obrębie dysku) – wolne miejsce zwiększy się dopiero po opróżnieniu Kosza w Finderze. Możesz je stamtąd przywrócić (Odłóż).
-Elementy uruchamiane przy logowaniu i działające w tle wyłączysz w Ustawieniach systemowych → Ogólne → Elementy logowania i rozszerzenia. MacCare sam niczego nie wyłącza.
+Elementy uruchamiane przy logowaniu i działające w tle wyłączysz w Ustawieniach systemowych → Ogólne → Elementy logowania (w macOS 15 i nowszych: Elementy logowania i rozszerzenia). MacCare sam niczego nie wyłącza.
 Elementy w katalogu tymczasowym nieużywane od 3 dni. Długo działające programy mogą tu trzymać blokady i gniazda – dlatego nie są zaznaczane same.
 Elementy z kwarantanny przywrócisz w Historii; elementy z Kosza – z Findera (%lld).
 Elementów Apple nie można wyłączyć.
@@ -435,6 +439,7 @@ Masz najnowszą wersję (%@).
 Maven – lokalne repozytorium
 Mało miejsca na dysku
 Mało wolnego miejsca na dysku
+Mało wolnego miejsca: %@.
 Metodologia oceny v%@
 Metodologia v%@: każdy komponent liczony wyłącznie z pomiarów, brak danych nie podnosi oceny.
 Microsoft Edge – pamięć podręczna
@@ -443,7 +448,7 @@ Miejsce do odzyskania przez system (purgeable)
 Miejsce docelowe jest zajęte: %@
 Miejsce przywrócenia jest niedozwolone – nic nie ruszono: %@
 Miejsce przywrócenia leży poza katalogiem domowym i lokalizacjami czyszczenia
-Miejsce wraca po opróżnieniu Kosza lub kwarantanny (ta czyści się sama po 7 dniach).
+Miejsce wraca dopiero po opróżnieniu Kosza w Finderze.
 Mierzę obciążenie procesora, pamięci i baterii…
 Migawki Time Machine trzymają miejsce, które system zwolni sam
 Minimalny
@@ -457,7 +462,7 @@ Model wymaga ok. %@, a bezpieczny budżet to %@. Wybierz mniejszy model.
 Model zaproponował operację – w trybie automatycznym wykonuję tylko zaplanowane czynności
 Model zwrócił odpowiedź w złym formacie.
 Modele AI
-Modele działają lokalnie przez Ollamę (127.0.0.1) – dane nie opuszczają Maca, a MacCare niczego nie pobiera sam. „Automatycznie” wybiera zainstalowany model, który teraz zmieści się w pamięci (najpierw qwen2.5, potem Bielik).
+Modele działają lokalnie przez Ollamę (127.0.0.1) – dane nie opuszczają Maca, a MacCare niczego nie pobiera sam. „Automatycznie” wybiera zainstalowany model, który teraz zmieści się w pamięci (kolejno: qwen2.5, qwen3, Bielik, Llama 3, Mistral, Gemma).
 Modele i zbiory danych z hub. Pobiorą się ponownie (często wiele GB).
 Modele rozpoznawania mowy.
 Mogą być ważne – zawsze do przejrzenia, trafiają do Kosza.
@@ -470,6 +475,7 @@ Na Twoim Macu jest %@ danych do odzyskania
 Na dysku jest %lld lokalnych migawek, a %@ liczy się jako „do odzyskania przez system”. Usunięcie plików objętych migawką nie zwiększy wolnego miejsca, dopóki migawki nie wygasną (zwykle do 24 godz.) – dlatego sprzątanie pamięci podręcznej bywa tu mało skuteczne. macOS zwalnia je sam, gdy brakuje miejsca.
 Na dysku startowym zostało %@ (%lld%%). 
 Nadal zablokowane – dostępne po zakończeniu poprawek bezpieczeństwa kwarantanny
+Najbardziej urosły od %@: %@.
 Najbardziej urosły: %@.
 Najwięksi konsumenci
 Największe pliki
@@ -539,6 +545,7 @@ Niespójne dane wyboru – odśwież listę
 Nieużywana aplikacja zajmuje dużo pamięci
 Nieużywane
 Nieużywane 90+ dni
+Niezakończone procesy w tle
 Nieznane narzędzie
 Nieznane narzędzie: %@
 Nieznany argument: %@
@@ -587,7 +594,7 @@ Odrzucono %lld wpisów kwarantanny wskazujących poza jej katalog (uszkodzony lu
 Odrzucono: %@
 Odznacz wszystkie
 Odzyskane zostanie ok. %@. Elementów nie będzie można przywrócić.
-Odzyskiwalne: %@ z %@. Resztę trzymają klony APFS, twarde dowiązania lub lokalne migawki Time Machine (obecnie: %lld); wróci po ich wygaśnięciu (zwykle do 24 godz.).
+Odzyskiwalne: %@ z %@. Resztę trzymają klony APFS, twarde dowiązania lub lokalne migawki Time Machine (obecnie: %@); wróci po ich wygaśnięciu (zwykle do 24 godz.).
 Odzyskiwanie kwarantanny po awarii
 Odśwież
 Ograniczanie wydajności (throttling)
@@ -690,6 +697,7 @@ Pojemność baterii jest już niższa niż na początku. Rozważ wizytę w serwi
 Pojemność baterii spadła do %lld%%
 Pokazujemy fakty i dowody. MacCare niczego nie wyłącza ani nie usuwa.
 Pokaż dowód (pomiar)
+Pokaż elementy kategorii
 Pokaż mniej
 Pokaż największe pliki
 Pokaż w Finderze
@@ -1115,7 +1123,6 @@ Zatrzymanie usługi systemowej (launchd)
 Zatwierdź i wykonaj
 Zatwierdź operację
 Zawiera chronioną lokalizację: %@
-Zawieszone procesy w tle
 Zaznacz %@
 Zaznacz kopię do przeniesienia do Kosza
 Zaznacz nadmiarowe kopie. Jedna kopia z każdej grupy zawsze zostaje.
@@ -1157,12 +1164,14 @@ Zwolnienie CPU/pamięci
 Zwolnienie miejsca na dysku
 Zwolnienie miejsca po odinstalowanych aplikacjach
 Zwolnienie miejsca zajętego przez kwarantannę
+Zwykle przejściowe przy dużym obciążeniu. Jeśli się powtarza, sprawdź wentylację Maca i zamknij programy mocno zapisujące na dysk.
 Zwykle znikają po restarcie Maca.
 adres nielokalny
 aktualizacji – system aktualny
 anulowano
 aplikacja uruchomiona
 baza zapisana przez nowszą wersję MacCare (schemat %lld > %lld) – nie jest zmieniana
+bez kontenera Safari
 bezpieczne
 brak
 brak (opcjonalny)
@@ -1170,9 +1179,11 @@ brak (za mało danych)
 brak danych
 brak dostępu do %@ (%@%@) – nie ma ich na mapie
 brak mierzalnego efektu
+brak odcisku z chwili zaznaczenia – zaznacz element ponownie
 błąd
 chroniona lokalizacja
 chroniony obszar
+co najmniej %@
 cykle: —
 czeka na zgodę
 dane aplikacji
@@ -1196,7 +1207,6 @@ kondycja %@
 kondycja baterii: 
 krytyczne
 krytyczny
-kwarantanna
 leży na innym wolumenie niż katalog domowy – Kosz działa tam inaczej
 liczę…
 macOS nie pozwala MacCare wyświetlać powiadomień – włącz je w Ustawieniach systemowych → Powiadomienia.
@@ -1246,6 +1256,7 @@ przed: %@ · po: %@
 przeniesiono %@ · pozostało %lld dn. do automatycznego usunięcia
 przypuszczenie
 przyznany
+różne
 różne obciążenie tła (%lld%% → %lld%%)
 system nie udostępnia kondycji
 słaba
@@ -1255,6 +1266,7 @@ tryb Edycja wygasł – nic nie ruszono
 tło – nie wlicza się do oceny
 ustaleń: %lld
 usług nasłuchuje z sieci
+użytkownik
 używana dziś
 w kontenerze Safari – nie sprawdzamy
 waga %lld%%

@@ -50,7 +50,7 @@ struct MenuBarView: View {
                 Text("Ostatni Smart Scan: \(s.date.formatted(date: .abbreviated, time: .shortened))").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textTertiary)
             }
             Divider()
-            Button { show(.smartScan); Task { model.restart(.smartScan); await model.smartScan() } } label: { Label("Uruchom Smart Scan", systemImage: "wand.and.stars") }
+            Button { runSmartScan() } label: { Label("Uruchom Smart Scan", systemImage: "wand.and.stars") }
                 .buttonStyle(.prominent(.smartScan, large: false))
             HStack {
                 Button("Otwórz MacCare") { show(nil) }.buttonStyle(.soft)
@@ -60,6 +60,13 @@ struct MenuBarView: View {
             Text(model.isReadOnlyMode ? String(localized: "Tryb: tylko odczyt") : String(localized: "Tryb: Edycja")).font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textTertiary)
         }
         .padding(14).frame(width: 300)
+    }
+
+    /// Audyt 3: w trakcie skanu (np. automatycznego) tylko pokazuje postęp – bez cofania ekranu do startu.
+    private func runSmartScan() {
+        show(.smartScan)
+        guard model.scanStage == nil else { return }
+        Task { model.restart(.smartScan); await model.smartScan() }
     }
 
     private func show(_ module: AppModule?) {

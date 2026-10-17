@@ -17,7 +17,7 @@ done
 APP_NAME="MacCare AI"
 APP="build/${APP_NAME}.app"
 BUNDLE_ID="io.github.u7464145221-max.maccare"
-VERSION="${MACCARE_VERSION:-0.2.4}"
+VERSION="${MACCARE_VERSION:-0.2.5}"
 
 # Decyzja właściciela 15.10.2026: TYLKO Apple Silicon (arm64) – bez budowy uniwersalnej i bez wsparcia Intela.
 echo "== swift build -c $CONFIG (arm64)"

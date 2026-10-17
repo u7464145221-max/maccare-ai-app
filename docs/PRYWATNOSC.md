@@ -18,7 +18,7 @@ Stan na 16.10.2026, po niezależnym audycie, który znalazł w poprzedniej wersj
 - **Nazwy, rozmiary i daty plików** – do mapy dysku, dużych plików i Porządków. Treści plików program nie czyta, z wyjątkiem:
   - **duplikatów** – porównuje zawartość plików o tym samym rozmiarze (skrót kryptograficzny), żeby nie pomylić różnych plików;
   - **podobnych zdjęć** – odczytuje miniatury zdjęć;
-  - **aplikacji i elementów autostartu** – odczytuje ich opis (`Info.plist`) i sprawdza podpis kodu przez system.
+  - **aplikacji i elementów autostartu** – odczytuje ich opis (`Info.plist`), pierwsze 512 bajtów pliku programu (architektura procesora) i datę ostatniego użycia ze Spotlight oraz sprawdza podpis kodu przez system.
 - **Informacje o systemie** – obciążenie procesora i pamięci, stan baterii, temperatura, ustawienia zabezpieczeń (SIP, Gatekeeper, FileVault, zapora), elementy autostartu, otwarte porty, raporty awarii z `~/Library/Logs/DiagnosticReports`. Odczyt idzie przez interfejsy systemu i stałą listę poleceń systemowych, uruchamianych tylko z określonymi argumentami tylko do odczytu (`CommandExactArgumentsTests`).
 - **Kondycja dysku SSD** – dziennik SMART wbudowanego dysku (zużycie, zapas komórek, temperatura, ilość zapisanych danych, godziny pracy, błędy nośnika) przez interfejs systemu IOKit, tylko do odczytu i bez hasła administratora. Numeru seryjnego dysku program nie odczytuje (`SSDHealthTests`, `SSDHealthLiveTests`).
 - **Przeglądarki** (zakładka Ochrona → Przeglądarki) – tylko rozmiary plików historii i ciasteczek oraz pamięci podręcznej Safari, Chrome, Brave, Edge, Arc, Vivaldi i Firefoksa. Program nie czyta odwiedzanych adresów ani ciasteczek, niczego nie usuwa i nie zagląda do kontenera Safari (`BrowserPrivacyTests`).
@@ -28,7 +28,7 @@ Stan na 16.10.2026, po niezależnym audycie, który znalazł w poprzedniej wersj
 
 ## Co program zapisuje (tylko na Twoim Macu)
 W folderze `~/Library/Application Support/MacCare AI`:
-- `history.sqlite` – historia skanów, wykryte problemy, próbki pomiarów (po 7 dniach zagęszczane; wpisy starsze niż ok. 13 miesięcy, a dziennik operacji – niż 2 lata, są usuwane: `retentionPrunesOnlyOldRowsAndKeepsReclaimedTotal`), dziennik operacji, pomiary przed i po operacjach oraz ustawienia. Ścieżki w katalogu domowym są we wszystkich tabelach zapisywane z „~” zamiast nazwy konta (`HistoryRedactionTests`). Jeśli baza się uszkodzi, uszkodzony plik zostaje obok jako `history.sqlite.corrupt-…`.
+- `history.sqlite` – historia skanów, wykryte problemy, próbki pomiarów (po 7 dniach zagęszczane; skany, próbki i porównania starsze niż ok. 13 miesięcy, lista wykrytych problemów – niż pół roku, a dziennik operacji – niż 2 lata, są usuwane; łączna suma odzyskanego miejsca zostaje: `retentionPrunesOnlyOldRowsAndKeepsReclaimedTotal`), dziennik operacji, pomiary przed i po operacjach oraz ustawienia. Ścieżki w katalogu domowym są we wszystkich tabelach zapisywane z „~” zamiast nazwy konta (`HistoryRedactionTests`). Jeśli baza się uszkodzi, uszkodzony plik zostaje obok jako `history.sqlite.corrupt-…`.
 - `apps-cache.json` – zapamiętane rozmiary aplikacji, żeby ich lista pojawiała się od razu (ścieżki z „~”). Rozmiar jest liczony od nowa, gdy aplikacja się zmieni (`appSizesAreRememberedUntilTheBundleChanges`).
 - `diskmap-cache.lzfse` – zapamiętane rozmiary folderów, żeby mapa dysku pojawiała się od razu po uruchomieniu (ścieżki z „~”).
 - `bench` – chwilowy folder pomiaru szybkości plików przy operacjach w Edycji. Pliki pomiaru są usuwane od razu po pomiarze.
@@ -36,13 +36,13 @@ W folderze `~/Library/Application Support/MacCare AI`:
 
 W standardowych preferencjach aplikacji (`~/Library/Preferences/io.github.u7464145221-max.maccare.plist`) są zapisywane:
 - ustawienia wyglądu (np. widok mapy, ikona w pasku menu);
-- włączenie sprawdzania aktualizacji i powiadomień;
+- włączenie sprawdzania aktualizacji i powiadomień oraz harmonogram automatycznego Smart Scan (z datą włączenia i ostatniego automatycznego skanu);
 - czas ostatniego sprawdzenia i ostatnich powiadomień.
 
 Tryb Edycja nigdy nie jest zapisywany – po każdym uruchomieniu program działa tylko do odczytu (`ExecutionGuardTests`).
 
 ## Asystent AI
-Asystent działa wyłącznie lokalnie: przez Ollamę na Twoim Macu, z modelem uruchomionym na Twoim Macu, albo przez model Apple działający na urządzeniu. Pomiary, o które pytasz, trafiają tylko do tego lokalnego modelu. Asystent ma wyłącznie narzędzia odczytu i niczego nie zmienia, a proponowane operacje widzisz jako podgląd.
+Asystent działa wyłącznie lokalnie: przez Ollamę na Twoim Macu, z modelem uruchomionym na Twoim Macu, albo przez model Apple działający na urządzeniu. Pomiary, o które pytasz, trafiają tylko do tego lokalnego modelu. Asystent wykonuje wyłącznie odczyt i niczego nie zmienia. Operacje (np. przeniesienie do Kosza) może tylko zaproponować – widzisz je jako podgląd i wykonać możesz je wyłącznie sam, w trybie Edycja (`LLMActionInvariantTests`).
 
 ## Eksport raportu
 W tej wersji aplikacja nie ma eksportu raportu. Gdy powstanie, ten opis zostanie uzupełniony.

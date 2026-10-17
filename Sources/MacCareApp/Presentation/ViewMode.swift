@@ -122,9 +122,9 @@ enum SimplePresentation {
         case "startup.items":
             return (String(localized: "Programy uruchamiają się razem z Macem"), String(localized: "Część z nich może być pozostałością po usuniętych aplikacjach. Szczegóły są w trybie Profesjonalnym."))
         case "stability.crashes":
-            return (app.isEmpty ? String(localized: "Aplikacja często się zawiesza") : String(localized: "\(app) często się zawiesza"), String(localized: "Pomoże aktualizacja albo ponowna instalacja aplikacji."))
+            return (app.isEmpty ? String(localized: "Aplikacja często ulega awarii") : String(localized: "\(app) często ulega awarii"), String(localized: "Pomoże aktualizacja albo ponowna instalacja aplikacji."))
         case "proc.zombies":
-            return (String(localized: "Zawieszone procesy w tle"), String(localized: "Zwykle znikają po restarcie Maca."))
+            return (String(localized: "Niezakończone procesy w tle"), String(localized: "Zwykle znikają po restarcie Maca."))
         case "sys.uptime":
             return (String(localized: "Mac nie był restartowany od dawna"), String(localized: "Restart odświeża system i zwykle poprawia szybkość."))
         default:
@@ -133,9 +133,16 @@ enum SimplePresentation {
         }
     }
 
-    private static func firstSentence(_ s: String) -> String {
-        guard let r = s.range(of: ". ") else { return s }
-        return String(s[..<r.lowerBound]) + "."
+    /// Audyt 3: koniec zdania – kropka i spacja, ale nie po skrótach („np.”, „ok.”, „tzw.”…), które ucinały zdanie w trybie Prostym.
+    static func firstSentence(_ s: String) -> String {
+        let abbreviations = ["np", "ok", "tzw", "m.in", "itp", "itd", "tj", "ang", "e.g", "i.e", "approx", "etc", "vs"]
+        var from = s.startIndex
+        while let r = s.range(of: ". ", range: from..<s.endIndex) {
+            let word = s[..<r.lowerBound].split(whereSeparator: { $0 == " " || $0 == "(" }).last.map(String.init)?.lowercased() ?? ""
+            if !abbreviations.contains(word) { return String(s[..<r.lowerBound]) + "." }
+            from = r.upperBound
+        }
+        return s
     }
 
     // MARK: Oczyszczanie tekstu z żargonu

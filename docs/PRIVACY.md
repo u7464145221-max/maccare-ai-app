@@ -16,7 +16,7 @@ As of October 16, 2026 (after an independent audit that found incorrect statemen
 - **File names, sizes and dates** – for the disk map, large files and Cleanup. It does not read file contents, except for:
   - **Duplicates** – it compares the contents of files of the same size (a cryptographic hash) so that different files are never confused.
   - **Similar photos** – it reads photo thumbnails.
-  - **Apps and login items** – it reads their description (`Info.plist`) and has the system check their code signature.
+  - **Apps and login items** – it reads their description (`Info.plist`), the first 512 bytes of the program file (processor architecture) and the last-used date from Spotlight, and has the system check their code signature.
 - **System information** – CPU and memory load, battery condition, temperature, security settings (SIP, Gatekeeper, FileVault, firewall), login items, open ports, crash reports from `~/Library/Logs/DiagnosticReports`. This uses system interfaces and a fixed list of system commands that run only with specific read-only arguments (`CommandExactArgumentsTests`).
 - **Running programs** – so that it never cleans the cache of a program that is working right now, the program checks your account's process list and reads the command-line arguments of **each** of those processes, but keeps only the names of recognised developer tools (such as npm, cargo, xcodebuild). It does not analyse the processes' environment variables; nothing from this is stored or sent (`ToolActivityTests`).
 - **Installed apps** – the Applications folders and the system app database (LaunchServices), so that data of an app installed elsewhere is never treated as a leftover.
@@ -24,16 +24,16 @@ As of October 16, 2026 (after an independent audit that found incorrect statemen
 
 ## What the program stores (only on your Mac)
 In `~/Library/Application Support/MacCare AI`:
-- `history.sqlite` – scan history, detected issues, measurement samples (condensed after 7 days; entries older than about 13 months, and operations-log entries older than 2 years, are removed: `retentionPrunesOnlyOldRowsAndKeepsReclaimedTotal`), the operations log, before/after measurements and settings. Paths inside your home folder are stored with “~” instead of your account name in every table (`HistoryRedactionTests`). If the database gets damaged, the damaged file is kept next to it as `history.sqlite.corrupt-…`.
+- `history.sqlite` – scan history, detected issues, measurement samples (condensed after 7 days; scans, samples and comparisons older than about 13 months, the detected-issues list older than six months and operations-log entries older than 2 years are removed; the lifetime total of reclaimed space is kept: `retentionPrunesOnlyOldRowsAndKeepsReclaimedTotal`), the operations log, before/after measurements and settings. Paths inside your home folder are stored with “~” instead of your account name in every table (`HistoryRedactionTests`). If the database gets damaged, the damaged file is kept next to it as `history.sqlite.corrupt-…`.
 - `apps-cache.json` – remembered app sizes so the app list appears immediately (paths with “~”). A size is measured again when the app changes (`appSizesAreRememberedUntilTheBundleChanges`).
 - `diskmap-cache.lzfse` – remembered folder sizes, so the disk map appears instantly after launch (paths with “~”).
 - `bench` – a temporary folder for the file-speed measurement taken during operations in Edit mode; the measurement files are deleted right away.
 - `quarantine` – items moved to quarantine (this path is currently off – Cleanup moves items to the Trash). Permanent deletion from quarantine is currently unavailable, even in Edit mode (`expiredQuarantineIsNotPurgedOnStartupInReadOnly`).
 
-The app's standard preferences (`~/Library/Preferences/io.github.u7464145221-max.maccare.plist`) store appearance settings (such as the map view or the menu bar icon), whether update checks and notifications are on, and the time of the last check and of the last notifications. Edit mode is never stored – after every launch the program is read-only (`ExecutionGuardTests`).
+The app's standard preferences (`~/Library/Preferences/io.github.u7464145221-max.maccare.plist`) store appearance settings (such as the map view or the menu bar icon), whether update checks and notifications are on, the automatic Smart Scan schedule (with when it was turned on and when it last ran), and the time of the last check and of the last notifications. Edit mode is never stored – after every launch the program is read-only (`ExecutionGuardTests`).
 
 ## AI assistant
-The assistant runs only locally: through Ollama on your Mac (with a model running on your Mac) or through Apple's on-device model. The measurements you ask about go only to that local model. The assistant has read-only tools and changes nothing; proposed operations are shown to you as a preview.
+The assistant runs only locally: through Ollama on your Mac (with a model running on your Mac) or through Apple's on-device model. The measurements you ask about go only to that local model. The assistant only reads and changes nothing. It can merely propose operations (such as moving to the Trash) – you see them as a preview, and only you can carry them out, in Edit mode (`LLMActionInvariantTests`).
 
 ## Report export
 This version of the app has no report export. This description will be updated when it does.

@@ -83,6 +83,8 @@ public struct PathPolicy: Sendable {
         return FileFlags.isDataless(path)
     }
 
+    static func fold(_ s: String) -> String { s.precomposedStringWithCanonicalMapping.lowercased() }
+
     public func check(_ rawPath: String, scope: FileOperationScope) -> PathDecision {
         guard !rawPath.isEmpty else { return .denied(String(localized: "Pusta ścieżka")) }
         if rawPath.contains("\0") { return .denied(String(localized: "Niedozwolony znak w ścieżce")) }
@@ -90,10 +92,13 @@ public struct PathPolicy: Sendable {
         guard p.hasPrefix("/") else { return .denied(String(localized: "Ścieżka musi być bezwzględna")) }
         if rawPath.split(separator: "/").contains("..") { return .denied("Niedozwolony segment „..”") }
 
-        for d in deniedCanonical where p == d.canonical { return .denied("Chroniona lokalizacja: \(d.raw)") }
-        for d in protectedCanonical where PathTools.isWithin(p, d.canonical) { return .denied("Chroniony obszar: \(d.raw)") }
+        // Audyt 3: porównanie z listą chronionych bez rozróżniania wielkości liter i postaci Unicode (domyślny APFS: „~/.SSH” to ten sam katalog
+        // co „~/.ssh”). Na woluminie rozróżniającym wielkość liter daje to najwyżej więcej odmów – nigdy mniej.
+        let fp = Self.fold(p)
+        for d in deniedCanonical where fp == Self.fold(d.canonical) { return .denied("Chroniona lokalizacja: \(d.raw)") }
+        for d in protectedCanonical where PathTools.isWithin(fp, Self.fold(d.canonical)) { return .denied("Chroniony obszar: \(d.raw)") }
         // F9: wykluczenie chroni też folder nadrzędny – element ZAWIERAJĄCY chronioną lokalizację (np. ~/Library/Application Support z danymi TCC) jest odrzucany
-        if let inner = (deniedCanonical + protectedCanonical).first(where: { $0.canonical != p && PathTools.isWithin($0.canonical, p) }) {
+        if let inner = (deniedCanonical + protectedCanonical).first(where: { Self.fold($0.canonical) != fp && PathTools.isWithin(Self.fold($0.canonical), fp) }) {
             return .denied(String(localized: "Zawiera chronioną lokalizację: \(inner.raw)"))
         }
         // F9: elementy chronione przez system (SIP) albo zablokowane (immutable, append-only)

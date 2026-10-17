@@ -100,6 +100,8 @@ public struct DiskUsage: Sendable {
     public var fileCount = 0
     public var hardLinkedFiles = 0
     public var unreadable = 0
+    /// Audyt 3: pomiar przerwany limitem czasu – wynik jest dolną granicą („co najmniej”), nie pełną wartością.
+    public var timedOut = false
     /// Próbka ścieżek bez dostępu (najwyżej `maxUnreadablePaths`) – do komunikatu „skan niepełny” (P1-4).
     public var unreadablePaths: [String] = []
     public static let maxUnreadablePaths = 20
@@ -146,7 +148,7 @@ public struct DiskUsage: Sendable {
         var u = DiskUsage()
         guard canList(root), let e = FileManager.default.enumerator(atPath: root) else { u.noteUnreadable(root); return u }
         forEachEntry(of: e) { rel in
-            if let d = deadline, Date() > d { return false }
+            if let d = deadline, Date() > d { u.timedOut = true; return false }
             let p = root + "/" + rel
             guard let s = FileStat.of(p) else { u.noteUnreadable(p); return true }
             if s.isSymlink { if s.isDirectory { e.skipDescendants() }; return true }
@@ -249,7 +251,11 @@ public struct DiskUsage: Sendable {
     static func measureBulk(_ root: String, clones: CloneInfoProvider, deadline: Date?, trackKinds: Bool, seen: inout Set<FileID>) -> DiskUsage? {
         var u = DiskUsage()
         var local = seen
-        let ok = BulkWalker.walk(root: root, shouldStop: { deadline.map { Date() > $0 } ?? false }) { event in
+        var stopped = false
+        let ok = BulkWalker.walk(root: root, shouldStop: {
+            if let d = deadline, Date() > d { stopped = true; return true }
+            return false
+        }) { event in
             switch event {
             case .file(let dir, _, let f):
                 u.addEntry(f, dir: dir, clones: clones, trackKinds: trackKinds, seen: &local, sparseSeen: false)
@@ -261,6 +267,7 @@ public struct DiskUsage: Sendable {
         }
         guard ok else { return nil }
         seen = local
+        u.timedOut = stopped
         u.classifier = FileKindClassifier()
         return u
     }

@@ -14,6 +14,8 @@ public struct BrowserPrivacy: Sendable, Equatable, Identifiable {
     public var historyBytes: UInt64?
     public var cookiesBytes: UInt64?
     public var cacheBytes: UInt64?
+    /// Audyt 3: pomiar pamięci podręcznej niepełny (limit czasu albo część bez dostępu) – `cacheBytes` to dolna granica.
+    public var cachePartial = false
 
     /// Gdzie wyczyścić dane w samej przeglądarce.
     public var clearHint: String {
@@ -43,29 +45,32 @@ public struct BrowserPrivacy: Sendable, Equatable, Identifiable {
         return specs.compactMap { s in
             let root = lib + s.root
             guard dirExists(root) else { return nil }
+            var partial = false
             let cache = s.cacheRoot.flatMap { c -> UInt64? in
                 let p = lib + c
                 guard FileStat.of(p)?.isDirectory == true else { return 0 }
                 var seen = Set<FileID>()
                 let u = DiskUsage.measure(p, deadline: Date().addingTimeInterval(cacheDeadline), seen: &seen)
-                return u.unreadable > 0 && u.allocated == 0 ? nil : u.allocated
+                if u.unreadable > 0 && u.allocated == 0 { return nil }
+                partial = u.timedOut || u.unreadable > 0
+                return u.allocated
             }
             switch s.engine {
             case .safari:
                 return BrowserPrivacy(name: s.name, engine: s.engine, profiles: 1, historyBytes: files(root, ["History.db", "History.db-wal"]),
-                                      cookiesBytes: nil, cacheBytes: cache)
+                                      cookiesBytes: nil, cacheBytes: cache, cachePartial: partial)
             case .chromium:
                 let profiles = subdirs(root).filter { $0 == "Default" || $0.hasPrefix("Profile ") }
                 guard !profiles.isEmpty else { return nil }
                 let h = sum(profiles.map { files(root + "/" + $0, ["History", "History-journal"]) })
                 let c = sum(profiles.map { files(root + "/" + $0, ["Cookies", "Cookies-journal", "Network/Cookies", "Network/Cookies-journal"]) })
-                return BrowserPrivacy(name: s.name, engine: s.engine, profiles: profiles.count, historyBytes: h, cookiesBytes: c, cacheBytes: cache)
+                return BrowserPrivacy(name: s.name, engine: s.engine, profiles: profiles.count, historyBytes: h, cookiesBytes: c, cacheBytes: cache, cachePartial: partial)
             case .firefox:
                 let profiles = subdirs(root)
                 guard !profiles.isEmpty else { return nil }
                 let h = sum(profiles.map { files(root + "/" + $0, ["places.sqlite", "places.sqlite-wal"]) })
                 let c = sum(profiles.map { files(root + "/" + $0, ["cookies.sqlite", "cookies.sqlite-wal"]) })
-                return BrowserPrivacy(name: s.name, engine: s.engine, profiles: profiles.count, historyBytes: h, cookiesBytes: c, cacheBytes: cache)
+                return BrowserPrivacy(name: s.name, engine: s.engine, profiles: profiles.count, historyBytes: h, cookiesBytes: c, cacheBytes: cache, cachePartial: partial)
             }
         }
     }

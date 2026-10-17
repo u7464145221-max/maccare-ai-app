@@ -95,7 +95,11 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
         // powiadomienia i pasek menu nie potrzebują świeższych danych o autostarcie; po pokazaniu okna dane odświeżają się jak dotąd.
         if enrichTask == nil, latest == nil || Self.enrichmentDue(lastEnrich: lastEnrich, now: now, background: background, interval: settings.enrichInterval) {
             lastEnrich = now
-            enrichTask = Task { [weak self] in await self?.runEnrichment() }
+            // Audyt 3: pełne wzbogacenie (stan załadowania każdego elementu autostartu – osobny `launchctl` na element, `lsof`, `tmutil`)
+            // najwyżej co 30 min; między nimi lekkie co 5 min (zabezpieczenia, podpisy z pamięci, awarie, SMART) z poprzednimi wartościami ciężkich części.
+            let full = latest == nil || now.timeIntervalSince(lastFullEnrich) >= Self.fullEnrichInterval
+            if full { lastFullEnrich = now }
+            enrichTask = Task { [weak self] in await self?.runEnrichment(full: full) }
         }
         snap.startupItems = startup; snap.security = security; snap.crashes = crashes; snap.localSnapshots = localSnapshots; snap.updates = updates; snap.ssd = ssd
         latest = snap
@@ -106,19 +110,33 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
         }
     }
 
-    private func runEnrichment() async {
+    static let fullEnrichInterval: TimeInterval = 1800
+    /// Testy: czekanie na trwające wzbogacenie.
+    func awaitEnrichment() async { await enrichTask?.value }
+    private var lastFullEnrich = Date.distantPast
+    /// Liczba pełnych i lekkich wzbogaceń (testy).
+    private(set) var enrichmentRuns: (full: Int, light: Int) = (0, 0)
+
+    private func runEnrichment(full: Bool = true) async {
         let home = settings.home
+        if full { enrichmentRuns.full += 1 } else { enrichmentRuns.light += 1 }
+        let previousStartup = startup, previousSecurity = security, previousSnaps = localSnapshots
         // Audyt 2 (4.3): kolektory są niezależne – razem, nie po kolei (autostart ok. 3,1 s, tmutil ok. 2,7 s, zabezpieczenia 0,5 s ⇒ czeka się na najdłuższy).
-        async let s = StartupCollector(home: home).collect()
-        async let sec = SecurityCollector().collect()
+        async let s = StartupCollector(home: home).collect(checkSignatures: true, checkLoaded: full)
+        async let sec = SecurityCollector().collect(ports: full)
         async let cr = Task.detached(priority: .utility) { () -> [CrashReportSummary]? in
             let c = CrashReportCollector(directory: home + "/Library/Logs/DiagnosticReports", home: home)
             return c.directoryUnreadable() ? nil : c.summaries()                           // nieczytelny katalog = nieznane, nie „0 awarii”
         }.value
-        async let snaps = LocalSnapshotCollector.collect()
+        async let snaps: [Date]? = full ? LocalSnapshotCollector.collect() : previousSnaps
         async let upd = Task.detached(priority: .utility) { SoftwareUpdateStatus.read() }.value       // P2-10: tylko odczyt plistu, bez sieci
         async let disk = Task.detached(priority: .utility) { SSDHealthCollector.read() }.value        // 18.10: SMART NVMe, tylko odczyt
-        let (rs, rsec, rcr, rsnaps, rupd, rssd) = await (s, sec, cr, snaps, upd, disk)
+        var (rs, rsec, rcr, rsnaps, rupd, rssd) = await (s, sec, cr, snaps, upd, disk)
+        if !full {                                                                        // lekkie: stan załadowania i porty z ostatniego pełnego odczytu
+            let loaded = Dictionary((previousStartup ?? []).map { ($0.label, $0.isLoaded) }, uniquingKeysWith: { a, _ in a })
+            rs = rs.map { var i = $0; i.isLoaded = loaded[i.label] ?? nil; return i }
+            if let p = previousSecurity { rsec.listeningExternalPorts = p.listeningExternalPorts; rsec.portsRead = p.portsRead }
+        }
         startup = rs; security = rsec; crashes = rcr; localSnapshots = rsnaps; updates = rupd; ssd = rssd
         enrichTask = nil
     }
@@ -180,8 +198,10 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
 
     /// Wymusza odświeżenie danych „bogatych” (autostart + podpisy, zabezpieczenia, awarie, migawki) i czeka na wynik – dla ręcznego skanu Ochrony.
     public func refreshEnrichmentNow() async {
-        if let t = enrichTask { await t.value } else { enrichTask = Task { [weak self] in await self?.runEnrichment() }; await enrichTask?.value }
-        if var l = latest { l.startupItems = startup; l.security = security; l.crashes = crashes; l.localSnapshots = localSnapshots; latest = l }
+        if let t = enrichTask { await t.value }
+        lastFullEnrich = Date()
+        enrichTask = Task { [weak self] in await self?.runEnrichment(full: true) }; await enrichTask?.value   // ręczny skan – zawsze pełny odczyt
+        if var l = latest { l.startupItems = startup; l.security = security; l.crashes = crashes; l.localSnapshots = localSnapshots; l.updates = updates; l.ssd = ssd; latest = l }
         lastEnrich = Date()
     }
 

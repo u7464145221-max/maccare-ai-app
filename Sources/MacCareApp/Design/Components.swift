@@ -170,8 +170,8 @@ struct ModuleHero: View {
         }
         .frame(width: size, height: size)
         .offset(y: float ? -6 : 6)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 3.2).repeatForever(autoreverses: true), value: float)
-        .onAppear { float = !reduceMotion }                                              // audyt 2 (4.13): bez zapętlonego unoszenia przy „Ogranicz ruch”
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.8), value: float)
+        .onAppear { float = !reduceMotion }                                              // audyt 3: jednorazowe wejście zamiast pętli (pętla rysowała ekran startowy bez przerwy)
         .accessibilityHidden(true)
     }
 }

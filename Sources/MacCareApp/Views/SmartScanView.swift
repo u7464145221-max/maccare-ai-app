@@ -142,7 +142,7 @@ struct SmartScanView: View {
     }
 
     /// P3-2 (AUD-UI-3): kiedy miejsce faktycznie wraca – nie od razu po przeniesieniu.
-    static let reclaimTiming = String(localized: "Miejsce wraca po opróżnieniu Kosza lub kwarantanny (ta czyści się sama po 7 dniach).")
+    static let reclaimTiming = String(localized: "Miejsce wraca dopiero po opróżnieniu Kosza w Finderze.")   // audyt 3: kwarantanna jest wyłączona – Porządki przenoszą do Kosza
 
     private var cleanupNote: String? {
         guard let r = model.scanResult else { return nil }

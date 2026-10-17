@@ -29,6 +29,13 @@ enum DiskMapPersistence {
         /// F11: punkt odniesienia porównania (rozmiary dzieci z wcześniejszego pomiaru).
         var previousSizes: [String: UInt64]?
         var previousAt: Date?
+        /// Audyt 3: dzienne pomiary katalogu głównego (tygodniowe „co urosło”); starsze pliki ich nie mają.
+        var daily: [DailySizes]?
+    }
+    struct DailySizes: Codable, Equatable {
+        var at: Date
+        var sizes: [String: UInt64]
+        var unreadable: [String]
     }
     struct Node: Codable {
         var name: String
@@ -51,6 +58,7 @@ enum DiskMapPersistence {
         var unreadableByChild: [String: Int] = [:]
         var previousSizes: [String: UInt64] = [:]
         var previousAt: Date? = nil
+        var daily: [DailySizes] = []
     }
 
     static func redact(_ path: String, home: String) -> String {
@@ -69,7 +77,8 @@ enum DiskMapPersistence {
                              breakdown: Dictionary(n.breakdown.map { ($0.category.rawValue, $0.bytes) }, uniquingKeysWith: +))
                     },
                     eventID: e.checkpoint?.eventID, eventStore: e.checkpoint?.storeUUID, unreadableByChild: e.unreadableByChild.isEmpty ? nil : e.unreadableByChild,
-                    previousSizes: e.previousSizes.isEmpty ? nil : e.previousSizes, previousAt: e.previousAt)
+                    previousSizes: e.previousSizes.isEmpty ? nil : e.previousSizes, previousAt: e.previousAt,
+                    daily: e.daily.isEmpty ? nil : e.daily)
         })
         let enc = JSONEncoder(); enc.dateEncodingStrategy = .secondsSince1970        // pełna precyzja (ISO 8601 gubi ułamki sekundy ⇒ każda data zmiany katalogu wyglądałaby na inną)
         let json = try enc.encode(file)
@@ -97,11 +106,13 @@ enum DiskMapPersistence {
             guard byChild.count <= 100_000, byChild.allSatisfy({ isSafeName($0.key) && $0.value >= 0 }) else { return nil }
             let previous = l.previousSizes ?? [:]
             guard previous.count <= 100_000, previous.keys.allSatisfy(isSafeName) else { return nil }
+            let daily = l.daily ?? []
+            guard daily.count <= 60, daily.allSatisfy({ $0.sizes.count <= 100_000 && $0.sizes.keys.allSatisfy(isSafeName) && $0.unreadable.count <= 100_000 }) else { return nil }
             var checkpoint: ChangeCheckpoint?
             if let id = l.eventID, let store = l.eventStore, UUID(uuidString: store) != nil { checkpoint = ChangeCheckpoint(eventID: id, storeUUID: store) }
             return Entry(dir: dir, nodes: nodes.sorted { $0.size > $1.size }, measuredAt: l.measuredAt, dirMTime: l.dirMTime,
                          inaccessible: inaccessible, unreadableInside: max(0, l.unreadableInside), checkpoint: checkpoint, unreadableByChild: byChild,
-                         previousSizes: previous, previousAt: previous.isEmpty ? nil : l.previousAt)
+                         previousSizes: previous, previousAt: previous.isEmpty ? nil : l.previousAt, daily: daily)
         }
     }
 

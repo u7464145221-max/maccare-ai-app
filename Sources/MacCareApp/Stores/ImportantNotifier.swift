@@ -95,7 +95,7 @@ struct SmartScanScheduleSettings: View {
                 SegmentedSwitch(selection: Binding(get: { model.smartScanSchedule }, set: { model.setSmartScanSchedule($0) }),
                                 options: SmartScanSchedule.allCases, title: Self.title, module: .settings, width: 360,
                                 accessibilityName: String(localized: "Automatyczny Smart Scan"))
-                Text("Działa, gdy MacCare jest uruchomiony (także tylko jako ikona w pasku menu) i nie korzystasz akurat z jego okna. Wyłącznie sprawdza – niczego nie usuwa. Podsumowanie przychodzi jako powiadomienie, jeśli powiadomienia są włączone. Pomijany w trybie Edycja, w trybie niskiego zużycia energii i gdy masz zaznaczone elementy w Porządkach.")
+                Text("Działa, gdy MacCare jest uruchomiony (także tylko jako ikona w pasku menu) i nie korzystasz akurat z jego okna. Wyłącznie sprawdza – niczego nie usuwa. Podsumowanie przychodzi jako powiadomienie, jeśli powiadomienia są włączone. Pomijany w trybie Edycja, w trybie niskiego zużycia energii i gdy sam zmieniłeś zaznaczenie w Porządkach (żeby nie podmienić listy, nad którą pracujesz).")
                     .font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary).fixedSize(horizontal: false, vertical: true)
             }
         }

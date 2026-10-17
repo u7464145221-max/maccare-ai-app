@@ -107,10 +107,10 @@ public struct TrashSelectedTool: AgentTool {
             guard let st = FileStat.of(target) else { plan.changed.append((raw, String(localized: "element już nie istnieje (zmieniony od chwili zaznaczenia)"))); continue }
             if let hd = homeDevice, st.device != hd { plan.skipped.append((raw, String(localized: "leży na innym wolumenie niż katalog domowy – Kosz działa tam inaczej"))); continue }
             let now = FileFingerprint(st)
-            if i < prints.count, !prints[i].isEmpty {
-                guard let selected = FileFingerprint(encoded: prints[i]) else { plan.changed.append((raw, "uszkodzony odcisk zaznaczenia")); continue }
-                if selected != now { plan.changed.append((raw, "zmieniony od chwili zaznaczenia (inny plik albo zmieniony rozmiar/data) – zaznacz go ponownie")); continue }
-            }
+            // Audyt 3: brak lub pusty odcisk = odmowa (wcześniej porównanie było wtedy pomijane, np. dla wpisu z pamięci mapy, którego już nie było).
+            guard i < prints.count, !prints[i].isEmpty else { plan.changed.append((raw, String(localized: "brak odcisku z chwili zaznaczenia – zaznacz element ponownie"))); continue }
+            guard let selected = FileFingerprint(encoded: prints[i]) else { plan.changed.append((raw, "uszkodzony odcisk zaznaczenia")); continue }
+            if selected != now { plan.changed.append((raw, "zmieniony od chwili zaznaczenia (inny plik albo zmieniony rozmiar/data) – zaznacz go ponownie")); continue }
             let cloud = isCloud(target)
             if cloud && !includeCloud {
                 plan.skipped.append((raw, String(localized: "plik w chmurze (iCloud/File Provider) – przeniesienie do Kosza usunie go także z chmury; włącz osobny przełącznik „Także pliki w chmurze”"))); continue
@@ -145,8 +145,8 @@ public struct TrashSelectedTool: AgentTool {
             var seen = Set<FileID>()
             let u = DiskUsage.measure(it.target, deadline: Date().addingTimeInterval(4), seen: &seen)
             total += u.allocated
-            if u.unreadable > 0 { truncated = true }
-            lines.append("\(tilde(it.target)) · \(ByteFormat.string(u.allocated))\(it.isCloud ? " · w chmurze" : "")")
+            if u.unreadable > 0 || u.timedOut { truncated = true }                              // audyt 3: także pomiar przerwany limitem czasu
+            lines.append("\(tilde(it.target)) · \(ByteFormat.string(u.allocated))\(it.isCloud ? String(localized: " · w chmurze") : "")")
         }
         var warnings = (plan.skipped + plan.changed).map { String(localized: "Pominięto „\(($0.path as NSString).lastPathComponent)”: \($0.reason)") }
         if plan.accepted.contains(where: \.isCloud) { warnings.insert(String(localized: "Uwaga: wśród elementów są pliki w chmurze – przeniesienie do Kosza usunie je także z chmury (na innych urządzeniach)."), at: 0) }

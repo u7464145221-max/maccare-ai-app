@@ -67,11 +67,13 @@ public struct MetricWindow: Sendable {
     public var maxAge: TimeInterval
     public init(maxAge: TimeInterval = 900) { self.maxAge = maxAge }
 
+    /// Audyt 3: modyfikacja w miejscu (bez kopii całej serii co 2 s dla każdej grupy procesów) i przycinanie od początku – próbki są chronologiczne.
     public mutating func record(_ key: String, _ value: Double, at t: Date) {
-        var s = series[key, default: []]
-        s.append(Point(t: t, value: value))
-        s.removeAll { t.timeIntervalSince($0.t) > maxAge }
-        series[key] = s
+        series[key, default: []].append(Point(t: t, value: value))
+        if let first = series[key]?.first, t.timeIntervalSince(first.t) > maxAge {
+            let drop = series[key]?.firstIndex { t.timeIntervalSince($0.t) <= maxAge } ?? 0
+            series[key]?.removeFirst(drop)
+        }
     }
     /// Jak długo (s) wartość nieprzerwanie była ≥ progu, licząc wstecz od ostatniej próbki.
     public func sustainedDuration(_ key: String, atLeast threshold: Double) -> TimeInterval {
@@ -81,7 +83,9 @@ public struct MetricWindow: Sendable {
         return last.t.timeIntervalSince(start)
     }
     public func values(_ key: String) -> [Double] { series[key]?.map { $0.value } ?? [] }
-    public mutating func prune(keeping keys: Set<String>) { series = series.filter { keys.contains($0.key) || !$0.key.hasPrefix("app.cpu.") } }
+    public mutating func prune(keeping keys: Set<String>) {
+        for k in series.keys where k.hasPrefix("app.cpu.") && !keys.contains(k) { series[k] = nil }   // audyt 3: bez budowy nowego słownika co pomiar
+    }
 }
 
 public struct RuleContext: Sendable {
@@ -288,10 +292,15 @@ public struct SSDHealthRule: DiagnosticRule {
     public func evaluate(_ s: SystemSnapshot, _ ctx: RuleContext) -> [Finding] {
         guard let d = s.ssd else { return [] }
         var out: [Finding] = []
-        if d.criticalWarning != 0 || d.availableSpare < d.availableSpareThreshold {
+        // Audyt 3: bity ostrzeżenia krytycznego NVMe rozróżnione – przekroczona temperatura (bit 1) jest przejściowa i nie oznacza wizyty w serwisie.
+        if d.hardwareProblem {
             out.append(Finding(id: "\(id).critical", ruleID: id, category: .storage, title: String(localized: "Dysk SSD zgłasza ostrzeżenie sprzętowe"),
                                detail: String(localized: "Zrób kopię zapasową (Time Machine) i skontaktuj się z serwisem Apple. Zapas komórek: \(d.availableSpare)% (próg \(d.availableSpareThreshold)%)."),
                                severity: .critical, certainty: .confirmed, evidenceIDs: ["ssd.warning", "ssd.spare"]))
+        } else if d.criticalWarning & 0x02 != 0 {
+            out.append(Finding(id: "\(id).temperature", ruleID: id, category: .storage, title: String(localized: "Dysk SSD zgłasza zbyt wysoką temperaturę"),
+                               detail: String(localized: "Zwykle przejściowe przy dużym obciążeniu. Jeśli się powtarza, sprawdź wentylację Maca i zamknij programy mocno zapisujące na dysk."),
+                               severity: .warning, certainty: .confirmed, evidenceIDs: ["ssd.warning", "ssd.temp"]))
         }
         if d.mediaErrors > 0 {
             out.append(Finding(id: "\(id).errors", ruleID: id, category: .storage, title: String(localized: "Dysk SSD zarejestrował błędy nośnika (\(d.mediaErrors))"),

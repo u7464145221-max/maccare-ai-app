@@ -480,6 +480,7 @@ final class AppModel: ObservableObject {
         objectWillChange.send()
         notifier.defaults.set(s.rawValue, forKey: SmartScanSchedule.storageKey)
         notifier.defaults.set(now, forKey: Self.scheduleEnabledAtKey)                 // pierwszy automatyczny skan dopiero po pełnym okresie
+        notifier.defaults.removeObject(forKey: SmartScanSchedule.lastRunKey)              // audyt 3: ponowne włączenie nie uruchamia skanu od razu (stary „ostatni skan”)
     }
 
     func refreshWeekly(now: Date = Date()) async {
@@ -490,12 +491,20 @@ final class AppModel: ObservableObject {
             let t = DiskTrend.compute(samples, now: now)
             if t != diskTrend { diskTrend = t }
         }
-        if notifier.enabled, let n = WeeklyGrowth.notice(trend: diskTrend, grown: diskMap.weeklyGrowth(of: home, now: now),
+        let g = diskMap.weeklyGrowth(of: home, now: now)
+        if notifier.enabled, let n = WeeklyGrowth.notice(trend: diskTrend, grown: g?.items ?? [], grownSince: g?.since,
                                                          lastSent: notifier.lastSent[WeeklyGrowth.kind], now: now) {
             notifier.send(n, now: now)
         }
-        await runScheduledSmartScanIfDue(now: now)
+        // Audyt 3: skan w osobnym zadaniu – pętla pomiarów na żywo (wykresy, ocena) nie stoi przez czas skanu Porządków.
+        if autoScanTask == nil {
+            autoScanTask = Task { [weak self] in
+                await self?.runScheduledSmartScanIfDue(now: now)
+                self?.autoScanTask = nil
+            }
+        }
     }
+    private var autoScanTask: Task<Void, Never>?
 
     /// Automatyczny Smart Scan wg harmonogramu – tylko odczyt (jak ręczny). Nie przeszkadza: nie rusza, gdy użytkownik pracuje w oknie MacCare,
     /// w trybie Edycja, w trakcie innego skanu, przy zaznaczonych elementach Porządków (wynik by je podmienił) ani w trybie niskiego zużycia energii.
@@ -505,7 +514,7 @@ final class AppModel: ObservableObject {
         guard smartScanSchedule.isDue(lastRun: d.object(forKey: SmartScanSchedule.lastRunKey) as? Date,
                                       enabledAt: d.object(forKey: Self.scheduleEnabledAtKey) as? Date, now: now) else { return false }
         let inUse = windowInUse ?? (appVisible && NSApp?.isActive == true)
-        guard !inUse, isReadOnlyMode, scanStage == nil, !cleanupScanning, selection.isEmpty, !ProcessInfo.processInfo.isLowPowerModeEnabled else { return false }
+        guard !inUse, isReadOnlyMode, scanStage == nil, !cleanupScanning, !userChangedSelection, !ProcessInfo.processInfo.isLowPowerModeEnabled else { return false }
         d.set(now, forKey: SmartScanSchedule.lastRunKey)                                  // zapis przed skanem – błąd skanu nie powoduje ponawiania co chwilę
         await smartScan()
         if let s = smartSummary, notifier.enabled {
@@ -566,7 +575,8 @@ final class AppModel: ObservableObject {
         phases[.cleanup] = .result
         let health = assessment?.overall
         if r.isComplete { history.recordScan(kind: "smart", at: Date(), findings: findings, reclaimable: r.safeReclaimable, health: health) }
-        smartSummary = SmartScanSummary(date: Date(), health: health, findings: findings.count, safeReclaimable: r.safeReclaimable, totalReclaimable: r.totalReclaimable, complete: r.isComplete)
+        smartSummary = SmartScanSummary(date: Date(), health: health, findings: findings.count, safeReclaimable: r.safeReclaimable, totalReclaimable: r.totalReclaimable,
+                                        complete: r.isComplete && r.unreadableLocations.isEmpty)   // audyt 3: miejsca bez dostępu = wynik niepełny
         scanStage = nil
         setPhase(.smartScan, .result)
         reloadHistory()
@@ -612,7 +622,12 @@ final class AppModel: ObservableObject {
         scanResult = r
         // Domyślnie zaznaczone są wyłącznie elementy bezpieczne (odtwarzalne, niskie ryzyko, aplikacja nie działa).
         selection = Set(r.candidates.filter { $0.safeToRemove }.map { $0.path })
+        defaultSelection = selection
     }
+    /// Audyt 3: zaznaczenie ustawione przez skan (domyślne). Automatyczny Smart Scan nie rusza tylko wtedy, gdy użytkownik je ZMIENIŁ –
+    /// wcześniej warunek „zaznaczenie puste” blokował każdy skan po pierwszym (skan sam zaznacza bezpieczne elementy).
+    private(set) var defaultSelection: Set<String> = []
+    var userChangedSelection: Bool { selection != defaultSelection }
 
     var candidates: [CleanupCandidate] { scanResult?.candidates ?? [] }
     /// Kandydaci widoczni w bieżącym trybie: w Prostym tylko ryzyko ≤ niskie (średnie/wysokie – dopiero w Profesjonalnym).

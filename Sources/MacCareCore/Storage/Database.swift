@@ -126,9 +126,20 @@ public final class HistoryStore: AuditSink, @unchecked Sendable {
     }
 
     /// `/Users/jan/x` ⇒ `~/x` (także w postaci z ukośnikami poprzedzonymi „\” z JSON-a).
+    /// Audyt 3: zamiana tylko na granicy elementu ścieżki (`/Users/jan` nie psuje `/Users/janek`), także dla postaci kanonicznej katalogu domowego.
     func redact(_ s: String) -> String {
         guard let h = redactedHome else { return s }
-        return s.replacingOccurrences(of: h, with: "~").replacingOccurrences(of: h.replacingOccurrences(of: "/", with: "\\/"), with: "~")
+        var out = s
+        let canon = PathTools.canonical(h, home: h)
+        for home in Set([h, canon]) where home.count > 1 {
+            for form in [home, home.replacingOccurrences(of: "/", with: "\\/")] {
+                let pattern = NSRegularExpression.escapedPattern(for: form) + #"(?=$|[/\\"'\s,;:)\]}])"#
+                if let re = try? NSRegularExpression(pattern: pattern) {                      // try? świadomie: wzorzec z escapedPattern jest zawsze poprawny
+                    out = re.stringByReplacingMatches(in: out, range: NSRange(out.startIndex..., in: out), withTemplate: "~")
+                }
+            }
+        }
+        return out
     }
 
     // MARK: Błędy bazy (P2-17 / AUD-ARCH-5)

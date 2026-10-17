@@ -17,6 +17,9 @@ struct ProtectionView: View {
             ModuleStart(module: .protection, scanTitle: String(localized: "Skanuj"), scanning: true, stage: model.moduleStage[.protection]) {}
         case .result:
             result
+                .onReceive(NotificationCenter.default.publisher(for: .init("MacCareScreenshotProtectionTab"))) { n in
+                    tab = Tab.allCases.first { "\($0)" == (n.object as? String) } ?? .overview
+                }   // tylko tryb zrzutów
         }
     }
 
@@ -129,7 +132,7 @@ struct ProtectionView: View {
             VStack(spacing: 0) {
                 // 17.10 (decyzja właściciela): MacCare niczego tu nie wyłącza – otwiera właściwe miejsce w Ustawieniach systemowych.
                 HStack(alignment: .center, spacing: 12) {
-                    Text("Elementy uruchamiane przy logowaniu i działające w tle wyłączysz w Ustawieniach systemowych → Ogólne → Elementy logowania i rozszerzenia. MacCare sam niczego nie wyłącza.")
+                    Text("Elementy uruchamiane przy logowaniu i działające w tle wyłączysz w Ustawieniach systemowych → Ogólne → Elementy logowania (w macOS 15 i nowszych: Elementy logowania i rozszerzenia). MacCare sam niczego nie wyłącza.")
                         .font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary).fixedSize(horizontal: false, vertical: true)
                     Spacer()
                     Button { model.openLoginItemsSettings() } label: { Label("Otwórz Ustawienia", systemImage: "gearshape") }.buttonStyle(.soft)
@@ -184,7 +187,8 @@ struct ProtectionView: View {
                             HStack(spacing: 18) {
                                 browserFact(String(localized: "Historia"), b.historyBytes)
                                 browserFact(String(localized: "Ciasteczka"), b.cookiesBytes, note: b.engine == .safari ? String(localized: "w kontenerze Safari – nie sprawdzamy") : nil)
-                                browserFact(String(localized: "Pamięć podręczna"), b.cacheBytes)
+                                browserFact(String(localized: "Pamięć podręczna"), b.cacheBytes, atLeast: b.cachePartial,
+                                            note: b.engine == .safari ? String(localized: "bez kontenera Safari") : nil)
                             }
                             if b.engine == .safari && b.historyBytes == nil {
                                 Text("Bez pełnego dostępu do dysku macOS nie pozwala odczytać danych Safari.").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textTertiary)
@@ -200,11 +204,12 @@ struct ProtectionView: View {
         .task { if model.browserPrivacy == nil { await model.loadBrowserPrivacy() } }
     }
 
-    private func browserFact(_ label: String, _ bytes: UInt64?, note: String? = nil) -> some View {
+    private func browserFact(_ label: String, _ bytes: UInt64?, atLeast: Bool = false, note: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary)
-            Text(bytes.map { ByteFormat.string($0) } ?? (note == nil ? String(localized: "nie wiadomo") : "—")).font(Theme.Typo.body.monospacedDigit().weight(.semibold)).foregroundStyle(Theme.Palette.text)
-            if let note, bytes == nil { Text(note).font(.system(size: 10.5)).foregroundStyle(Theme.Palette.textTertiary) }
+            Text(bytes.map { atLeast ? String(localized: "co najmniej \(ByteFormat.string($0))") : ByteFormat.string($0) } ?? (note == nil ? String(localized: "nie wiadomo") : "—"))
+                .font(Theme.Typo.body.monospacedDigit().weight(.semibold)).foregroundStyle(Theme.Palette.text)
+            if let note { Text(note).font(.system(size: 10.5)).foregroundStyle(Theme.Palette.textTertiary) }
         }
         .accessibilityElement(children: .combine)
     }

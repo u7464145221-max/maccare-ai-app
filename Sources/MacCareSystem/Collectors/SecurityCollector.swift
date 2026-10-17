@@ -15,14 +15,17 @@ public struct SecurityCollector: Sendable {
         self.xprotectBundlePlist = xprotectBundlePlist; self.xprotectAppPlist = xprotectAppPlist; self.fdaProbePath = fdaProbePath
     }
 
-    public func collect() async -> SecurityPosture {
+    /// `ports: false` (audyt 3): bez `lsof` – lekkie odświeżenie co 5 min; porty dostawca bierze z ostatniego pełnego odczytu.
+    public func collect(ports readPorts: Bool = true) async -> SecurityPosture {
         async let sip = CommandRunner.run("/usr/bin/csrutil", ["status"])
         async let gk = CommandRunner.run("/usr/sbin/spctl", ["--status"])
         async let fv = CommandRunner.run("/usr/bin/fdesetup", ["status"])
         async let fw = CommandRunner.run("/usr/libexec/ApplicationFirewall/socketfilterfw", ["--getglobalstate"])
         async let st = CommandRunner.run("/usr/libexec/ApplicationFirewall/socketfilterfw", ["--getstealthmode"])
         async let au = CommandRunner.run("/usr/sbin/softwareupdate", ["--schedule"])
-        async let ports = CommandRunner.run("/usr/sbin/lsof", ["-iTCP", "-sTCP:LISTEN", "-nP", "-F", "pcn"], timeout: 15)
+        // Audyt 3: `-b` – lsof nie wywołuje stat()/lstat() na zamontowanych systemach plików (wolumin sieciowy Time Machine na SMB wywoływał
+        // pytanie macOS o dostęp do plików na woluminie sieciowym, przypisywane MacCare); `-w` – bez ostrzeżeń. Wynik dla gniazd TCP bez zmian.
+        async let ports = readPorts ? CommandRunner.run("/usr/sbin/lsof", ["-b", "-w", "-iTCP", "-sTCP:LISTEN", "-nP", "-F", "pcn"], timeout: 15) : CommandRunner.Result.skipped
         let (rSip, rGk, rFv, rFw, rSt, rAu, rPorts) = await (sip, gk, fv, fw, st, au, ports)
 
         var p = SecurityPosture()

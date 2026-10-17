@@ -112,6 +112,9 @@ final class DiskMapStore: ObservableObject {
         /// F11: rozmiary dzieci z wcześniejszego pomiaru (punkt odniesienia porównania) i jego czas – starszy o co najmniej `comparisonMinAge`.
         var previousSizes: [String: UInt64] = [:]
         var previousAt: Date? = nil
+        /// Audyt 3: dzienne pomiary katalogu głównego mapy (najwyżej 1 na ~doba, 21 dni) – tygodniowe „co urosło” nie zależy od `previousAt`,
+        /// który przesuwa każde odświeżenie starsze niż godzina.
+        var daily: [DiskMapPersistence.DailySizes] = []
     }
     private var cache: [String: Listing] = [:]
     private var lru: [String] = []                       // najdawniej użyty pierwszy
@@ -155,7 +158,7 @@ final class DiskMapStore: ObservableObject {
     }
 
     nonisolated static func readPersisted(_ url: URL?, home: String) -> [DiskMapPersistence.Entry]? {
-        guard let url, let data = try? Data(contentsOf: url) else { return nil }        // try? świadomie: brak lub uszkodzona pamięć mapy ⇒ zwykły skan
+        guard let url, let data = SafeRead.regularFile(url.path, maxBytes: DiskMapPersistence.maxCompressedBytes) else { return nil }   // audyt 3: limit przed odczytem; brak/uszkodzenie ⇒ zwykły skan
         return DiskMapPersistence.decode(data, home: home)
     }
 
@@ -169,7 +172,7 @@ final class DiskMapStore: ObservableObject {
     private func adopt(_ entries: [DiskMapPersistence.Entry]) {
         for e in entries.sorted(by: { $0.measuredAt < $1.measuredAt }).suffix(maxListings) where cache[e.dir] == nil {
             cache[e.dir] = Listing(nodes: e.nodes, measuredAt: e.measuredAt, dirMTime: e.dirMTime, inaccessible: e.inaccessible, unreadableInside: e.unreadableInside,
-                                   checkpoint: e.checkpoint, unreadableByChild: e.unreadableByChild, previousSizes: e.previousSizes, previousAt: e.previousAt)
+                                   checkpoint: e.checkpoint, unreadableByChild: e.unreadableByChild, previousSizes: e.previousSizes, previousAt: e.previousAt, daily: e.daily)
             lru.append(e.dir)
         }
         loadedListingCount = cache.count
@@ -194,7 +197,7 @@ final class DiskMapStore: ObservableObject {
         let entries = lru.compactMap { d in cache[d].map { DiskMapPersistence.Entry(dir: d, nodes: $0.nodes, measuredAt: $0.measuredAt, dirMTime: $0.dirMTime,
                                                                                   inaccessible: $0.inaccessible, unreadableInside: $0.unreadableInside,
                                                                                   checkpoint: $0.checkpoint, unreadableByChild: $0.unreadableByChild,
-                                                                                  previousSizes: $0.previousSizes, previousAt: $0.previousAt) } }
+                                                                                  previousSizes: $0.previousSizes, previousAt: $0.previousAt, daily: $0.daily) } }
         let home = self.home
         await Task.detached(priority: .utility) {
             guard let data = try? DiskMapPersistence.encode(entries, home: home) else { return }   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
@@ -240,8 +243,17 @@ final class DiskMapStore: ObservableObject {
     private func store(_ dir: String, nodes: [MapNode], measuredAt: Date, dirMTime: Date, inaccessible: [String] = [], unreadableInside: Int = 0,
                        checkpoint: ChangeCheckpoint? = nil, unreadableByChild: [String: Int] = [:]) {
         let (previousSizes, previousAt) = baseline(for: dir, measuredAt: measuredAt)
+        var daily = cache[dir]?.daily ?? []
+        if dir == rootPath {
+            if daily.last.map({ measuredAt.timeIntervalSince($0.at) >= Self.dailySpacing }) ?? true {
+                let blocked = Set(unreadableByChild.filter { $0.value > 0 }.map(\.key)).union(inaccessible.map { ($0 as NSString).lastPathComponent })
+                daily.append(DiskMapPersistence.DailySizes(at: measuredAt, sizes: Dictionary(nodes.map { ($0.name, $0.size) }, uniquingKeysWith: { a, _ in a }),
+                                                           unreadable: blocked.sorted()))
+            }
+            daily = Array(daily.filter { measuredAt.timeIntervalSince($0.at) <= 21 * 86400 }.suffix(30))
+        }
         cache[dir] = Listing(nodes: nodes, measuredAt: measuredAt, dirMTime: dirMTime, inaccessible: inaccessible, unreadableInside: unreadableInside,
-                             checkpoint: checkpoint, unreadableByChild: unreadableByChild, previousSizes: previousSizes, previousAt: previousAt)
+                             checkpoint: checkpoint, unreadableByChild: unreadableByChild, previousSizes: previousSizes, previousAt: previousAt, daily: daily)
         touch(dir)
         var cachedNodes = cache.values.reduce(0) { $0 + $1.nodes.count }
         while (cache.count > maxListings || cachedNodes > maxCachedNodes), let oldest = lru.first(where: { $0 != current }) {
@@ -272,17 +284,22 @@ final class DiskMapStore: ObservableObject {
         return n.size >= Self.minVisibleChange ? SizeChange(delta: Int64(clamping: n.size), isNew: true, since: at) : nil
     }
 
-    /// 17.10 („co urosło w tym tygodniu”): foldery `dir`, które od wcześniejszego pomiaru urosły o ≥ 100 MB. Tylko gdy punkt odniesienia ma 2–21 dni,
-    /// a bieżący wynik nie jest starszy niż tydzień – inaczej porównanie nie dotyczyłoby „tego tygodnia” (pusta lista, bez zgadywania).
+    /// „Co urosło w tym tygodniu” (audyt 3): porównanie bieżącego wyniku katalogu głównego z dziennym pomiarem sprzed 5–10 dni (najbliższym 7 dniom).
+    /// Foldery bez dostępu w którymkolwiek z pomiarów są pomijane (nadanie Pełnego dostępu do dysku nie wygląda jak przyrost). Brak pomiaru = pusto.
     static let weeklyMinGrowth: Int64 = 100_000_000
-    func weeklyGrowth(of dir: String, now: Date = Date()) -> [WeeklyGrowth.Grown] {
-        guard let l = cache[dir], let at = l.previousAt else { return [] }
-        let age = now.timeIntervalSince(at)
-        guard age >= 2 * 86400, age <= 21 * 86400, now.timeIntervalSince(l.measuredAt) <= 7 * 86400 else { return [] }
-        return l.nodes.compactMap { n in
-            let d = Int64(clamping: n.size) - Int64(clamping: l.previousSizes[n.name] ?? 0)
+    static let dailySpacing: TimeInterval = 20 * 3600
+    func weeklyGrowth(of dir: String, now: Date = Date()) -> (items: [WeeklyGrowth.Grown], since: Date)? {
+        guard let l = cache[dir], now.timeIntervalSince(l.measuredAt) <= 7 * 86400 else { return nil }
+        let base = l.daily.filter { (5 * 86400...10 * 86400).contains(l.measuredAt.timeIntervalSince($0.at)) }
+            .min { abs(l.measuredAt.timeIntervalSince($0.at) - 7 * 86400) < abs(l.measuredAt.timeIntervalSince($1.at) - 7 * 86400) }
+        guard let b = base else { return nil }
+        let blocked = Set(b.unreadable).union(l.unreadableByChild.filter { $0.value > 0 }.map(\.key)).union(l.inaccessible.map { ($0 as NSString).lastPathComponent })
+        let items = l.nodes.compactMap { n -> WeeklyGrowth.Grown? in
+            guard !blocked.contains(n.name) else { return nil }
+            let d = Int64(clamping: n.size) - Int64(clamping: b.sizes[n.name] ?? 0)
             return d >= Self.weeklyMinGrowth ? WeeklyGrowth.Grown(name: n.name, delta: d) : nil
         }
+        return (items, b.at)
     }
 
     /// F12: elementy obecne we wcześniejszym pomiarze, których już nie ma (i nie są „bez dostępu”) – od największych; pomijalne (< 10 MB) pominięte.

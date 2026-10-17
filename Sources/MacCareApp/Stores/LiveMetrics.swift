@@ -36,11 +36,11 @@ final class LiveMetrics: ObservableObject {
 /// przeliczane co 2 s. Wolne miejsce publikowane dopiero po zmianie o co najmniej 0,1% pojemności (dokładność paska w stopce).
 @MainActor
 final class LiveDiskFacts: ObservableObject {
-    @Published private(set) var localSnapshotCount = 0
+    @Published private(set) var localSnapshotCount: Int?                            // audyt 3: nil = nie udało się odczytać (nie „0 migawek”)
     @Published private(set) var bootVolume: VolumeStats?
 
     func update(_ s: SystemSnapshot) {
-        let n = s.localSnapshots?.count ?? 0
+        let n = s.localSnapshots?.count
         if n != localSnapshotCount { localSnapshotCount = n }
         if let v = s.bootVolume, Self.differs(v, bootVolume) { bootVolume = v }
     }

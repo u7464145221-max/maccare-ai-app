@@ -8,7 +8,7 @@ Aplikacja do dbania o Maca: pokazuje, co zajmuje miejsce na dysku, co można bez
 - **Smart Scan** – jeden skan: porządki, ochrona i wydajność z oceną stanu i dowodami; opcjonalnie automatycznie codziennie lub co tydzień, z podsumowaniem w powiadomieniu.
 - **Moje pliki** – mapa dysku (bąbelki albo prostokąty), duże pliki, duplikaty, podobne zdjęcia; zmiany od wcześniejszego pomiaru.
 - **Porządki** – 47 reguł (pamięć podręczna aplikacji i przeglądarek, logi, narzędzia programistyczne, modele AI, instalatory…); czyszczenie przez Kosz.
-- **Ochrona** – SIP, Gatekeeper, FileVault, zapora, autostart z weryfikacją podpisów (i skrótem do Elementów logowania), otwarte porty, awarie, podgląd danych przeglądarek (tylko rozmiary).
+- **Ochrona** – SIP, Gatekeeper, FileVault, zapora, autostart z weryfikacją podpisów (i skrótem do Elementów logowania), otwarte porty, awarie, podgląd danych przeglądarek (tylko rozmiary; zakładki Autostart i Przeglądarki w widoku Profesjonalnym).
 - **Wydajność** – procesor, pamięć, bateria, temperatura, kondycja dysku SSD (SMART), najbardziej obciążające procesy.
 - **Pasek menu** – wykresy procesora i pamięci, wolne miejsce z ostrzeżeniem, gdy dysk szybko się zapełnia; tygodniowe powiadomienie „co urosło”.
 - **Aplikacje** – lista z rozmiarem i podpisem, możliwe pozostałości, odinstalowanie przez Kosz.

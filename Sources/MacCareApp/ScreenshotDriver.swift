@@ -49,6 +49,7 @@ enum ScreenshotDriver {
         else if mode == "w5" { await w5Scenario(model: model, dir: dir) }
         else if mode == "w7" { await w7Scenario(model: model, dir: dir) }
         else if mode == "w8" { await w8Scenario(model: model, dir: dir) }
+        else if mode == "w9" { await w9Scenario(model: model, dir: dir) }
         else { await mainScenario(model: model, dir: dir) }
         log("GOTOWE → \(dir.path)")
         exit(0)
@@ -422,6 +423,58 @@ enum ScreenshotDriver {
         log("W7 aplikacje: \(model.apps.apps.count), pozostałości: \(model.apps.leftovers?.map(\.bundleID) ?? [])")
         await both("aplikacje")
         NSApp.appearance = nil
+    }
+
+    /// W9 (audyt 3, 17.10): nowe ekrany 0.2.4 – karta SSD, Ochrona → Autostart i Przeglądarki, harmonogram w Ustawieniach, panel paska menu.
+    private static func w9Scenario(model: AppModel, dir: URL) async {
+        guard isSyntheticHome(model) else { log("ODMOWA: tryb w9 działa tylko na syntetycznym HOME"); return }
+        let prefix = argValue("--prefix") ?? "w9"
+        guard let actual = await setWindowSize(1280, 800) else { log("W9: brak okna"); return }
+        let size = "\(actual.width)x\(actual.height)"
+        func both(_ name: String, _ shot: () -> Void = {}) async {
+            for (appearance, suffix) in [(NSAppearance.Name.darkAqua, "ciemny"), (.aqua, "jasny")] {
+                NSApp.appearance = NSAppearance(named: appearance)
+                try? await Task.sleep(nanoseconds: 700_000_000)
+                capture("\(prefix)-\(size)-\(name)-\(suffix)", dir)
+            }
+            NSApp.appearance = nil
+        }
+        func settle(_ s: Double = 1.2) async { try? await Task.sleep(nanoseconds: UInt64(s * 1_000_000_000)) }
+        model.setViewMode(.pro)
+        // 1) Wydajność – karta SSD (prawdziwy odczyt SMART, tylko odczyt)
+        model.open(.performance); model.restart(.performance); await model.provider.refreshEnrichmentNow(); await model.scanPerformance(); await settle(1.5)
+        log("W9 SSD: \(model.snapshot?.ssd.map { "zużycie \($0.percentUsed)%, błędy \($0.mediaErrors)" } ?? "brak danych")")
+        scrollMain(to: 1); await settle(0.6)
+        await both("wydajnosc-ssd")
+        // 2) Ochrona – Autostart (przycisk do Ustawień) i Przeglądarki (syntetyczne profile w HOME)
+        model.open(.protection); model.restart(.protection); await model.scanProtection(); await settle(1.5)
+        NotificationCenter.default.post(name: .init("MacCareScreenshotProtectionTab"), object: "startup"); await settle(0.8)
+        await both("ochrona-autostart")
+        NotificationCenter.default.post(name: .init("MacCareScreenshotProtectionTab"), object: "browsers"); await settle(0.5)
+        await model.loadBrowserPrivacy(); await settle(1)
+        log("W9 przeglądarki: \(model.browserPrivacy?.map { "\($0.name) h=\($0.historyBytes.map(String.init) ?? "nil") c=\($0.cookiesBytes.map(String.init) ?? "nil")" } ?? [])")
+        await both("ochrona-przegladarki")
+        // 3) Ustawienia – harmonogram Smart Scan (na dole strony)
+        model.open(.settings); await settle(1); scrollMain(to: 1); await settle(0.6)
+        await both("ustawienia-harmonogram")
+        // 4) Panel paska menu – osobne okno z tym samym widokiem; tempo zapełniania z syntetycznych próbek (szybki ubytek ⇒ ostrzeżenie)
+        let now = Date()
+        for h in 0...(4 * 24) { model.history.recordSamples(["disk.free": 60e9 - 9e9 * Double(h) / 24], at: now.addingTimeInterval(-Double(4 * 24 - h) * 3600)) }
+        await model.refreshWeekly(now: now.addingTimeInterval(16 * 60))
+        model.open(.smartScan); model.restart(.smartScan); await model.smartScan(); await settle(1)
+        log("W9 tempo: \(model.diskTrend.map { "\($0.summary) ostrzeżenie=\($0.isWarning)" } ?? "brak")")
+        let panel = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 300, height: 480), styleMask: [.titled], backing: .buffered, defer: false)
+        panel.contentView = NSHostingView(rootView: MenuBarView().environmentObject(model).environmentObject(model.live).background(Theme.Palette.background))
+        for (appearance, suffix) in [(NSAppearance.Name.darkAqua, "ciemny"), (.aqua, "jasny")] {
+            panel.appearance = NSAppearance(named: appearance)
+            panel.setContentSize(panel.contentView?.fittingSize ?? NSSize(width: 300, height: 480))
+            panel.orderFrontRegardless(); await settle(1.2)
+            if let img = windowImage(panel), let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff), let png = rep.representation(using: .png, properties: [:]) {
+                let url = dir.appendingPathComponent("\(prefix)-pasek-menu-\(suffix).png")
+                try? png.write(to: url); log("zapisano \(url.lastPathComponent)")
+            } else { log("brak okna dla paska menu") }
+        }
+        panel.orderOut(nil)
     }
 
     /// Syntetyczne „zdjęcie” JPEG 900×600 (gradient + szum, > 100 KB) – tylko do zrzutów, wyłącznie w syntetycznym HOME.

@@ -32,7 +32,7 @@ struct CleanupView: View {
 
     private var result: some View {
         let g = grouped
-        let snapshots = disk.localSnapshotCount
+        let snapshots = disk.localSnapshotCount ?? 0                                   // tylko do dopisku „migawek: N” (> 0)
         let simple = model.viewMode == .simple
         return ScrollView {
             VStack(spacing: 18) {
@@ -197,6 +197,9 @@ struct CleanupDetail: View {
         .background(RoundedRectangle(cornerRadius: 8).fill(focus == cat ? Theme.Palette.surfaceAlt : Color.clear))
         .contentShape(Rectangle())
         .onTapGesture { focus = cat }
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(focus == cat ? [.isButton, .isSelected] : .isButton)          // audyt 3: wybór kategorii także przez VoiceOver i klawiaturę
+        .accessibilityAction(named: Text("Pokaż elementy kategorii")) { focus = cat }
     }
 
     private func setAll(_ list: [CleanupCandidate], _ on: Bool) {
@@ -208,6 +211,10 @@ struct CleanupItemRow: View {
     @EnvironmentObject private var disk: LiveDiskFacts                              // audyt 2 (4.5): tylko liczba migawek, nie pomiary co 2 s
     @EnvironmentObject var model: AppModel
     let candidate: CleanupCandidate
+    /// Audyt 3: ogólni „właściciele” z katalogu reguł są tłumaczeni; nazwy aplikacji – bez zmian (identyfikator porównywany w kodzie zostaje polski).
+    static func ownerLabel(_ owner: String) -> String {
+        switch owner { case "różne": return String(localized: "różne"); case "użytkownik": return String(localized: "użytkownik"); default: return owner }
+    }
 
     var body: some View {
         let c = candidate
@@ -222,7 +229,7 @@ struct CleanupItemRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 8) {
                     Text(shownName).font(.system(size: 13.5, weight: .semibold)).foregroundStyle(Theme.Palette.text).lineLimit(1)
-                    if !simple || (c.owner != "różne" && c.owner != shownName) { Text(c.owner).font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary) }
+                    if !simple || (c.owner != "różne" && c.owner != shownName) { Text(Self.ownerLabel(c.owner)).font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary) }
                 }
                 Text(simple ? SimplePresentation.plain(c.description) : c.description).font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(2)
                 HStack(spacing: 4) {
@@ -230,7 +237,7 @@ struct CleanupItemRow: View {
                     if c.ownerRunning { Pill(text: String(localized: "aplikacja uruchomiona"), color: Theme.Palette.critical, symbol: "bolt.fill") }
                     else if c.safeToRemove { Pill(text: String(localized: "bezpieczne"), color: Theme.Palette.ok, symbol: "checkmark.circle.fill") }
                     else if !simple { Pill(text: String(localized: "do przejrzenia"), color: Theme.Palette.warning, symbol: "eye") }
-                    if !simple { Pill(text: c.removal == .quarantine ? String(localized: "kwarantanna") : (c.removal == .trash ? String(localized: "Kosz") : String(localized: "trwale")), color: c.removal == .permanent ? Theme.Palette.critical : Theme.Palette.info) }
+                    if !simple { Pill(text: c.removal == .permanent ? String(localized: "trwale") : String(localized: "Kosz"), color: c.removal == .permanent ? Theme.Palette.critical : Theme.Palette.info) }   // audyt 3: dziś każda droga poza „trwale” to Kosz (kwarantanna wyłączona)
                 }
             }
             Spacer(minLength: 8)
@@ -238,7 +245,7 @@ struct CleanupItemRow: View {
                 Text(ByteFormat.string(c.reclaimableSize)).font(Theme.Typo.metricSmall).foregroundStyle(Theme.Palette.text)
                 if !simple && c.allocatedSize > c.reclaimableSize * 2 && c.allocatedSize > 1_000_000 {
                     Label("zajęte \(ByteFormat.string(c.allocatedSize))", systemImage: "info.circle").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.info)
-                        .help("Odzyskiwalne: \(ByteFormat.string(c.reclaimableSize)) z \(ByteFormat.string(c.allocatedSize)). Resztę trzymają klony APFS, twarde dowiązania lub lokalne migawki Time Machine (obecnie: \(disk.localSnapshotCount)); wróci po ich wygaśnięciu (zwykle do 24 godz.).")
+                        .help("Odzyskiwalne: \(ByteFormat.string(c.reclaimableSize)) z \(ByteFormat.string(c.allocatedSize)). Resztę trzymają klony APFS, twarde dowiązania lub lokalne migawki Time Machine (obecnie: \(disk.localSnapshotCount.map { String($0) } ?? String(localized: "nie wiadomo"))); wróci po ich wygaśnięciu (zwykle do 24 godz.).")
                 }
             }
         }

@@ -12,13 +12,15 @@
 " Pominięto %lld (nie spełniały zasad bezpieczeństwa lub zmieniły się od zaznaczenia)." = " Skipped %lld (did not meet the safety rules or changed since selection).";
 " Z tego %@ system może zwolnić sam (purgeable)." = " Of this, the system can free %@ by itself (purgeable).";
 " · niemierzalnych procesów systemowych: %lld (bez uprawnień nie widać ich zużycia)" = " · system processes not measurable: %lld (their usage is not visible without permissions)";
+" · teraz się nie mieści" = " · does not fit right now";
 " · tylko „Przenieś do Kosza” (Moje pliki, Porządki, Aplikacje)" = " · only “Move to Trash” (My Files, Cleanup, Apps)";
+" · w chmurze" = " · in the cloud";
 " · zajęte %@ (resztę trzymają migawki lub klony%@)" = " · allocated %@ (the rest is held by snapshots or clones%@)";
 " · zmiana %@" = " · modified %@";
 " – aktualizacja systemu jest szczególnie ważna" = " – the system update is especially important";
 "%@ autostartu z lokalnych narzędzi (np. środowiska Python, Homebrew)" = "%@ from local tools (e.g. Python environments, Homebrew)";
 "%@ bezczynnie zajmuje %@" = "%@ idly uses %@";
-"%@ często się zawiesza" = "%@ crashes often";
+"%@ często ulega awarii" = "%@ crashes often";
 "%@ do rozważenia" = "%@ to consider";
 "%@ mocno obciąża procesor" = "%@ is putting a heavy load on the CPU";
 "%@ obciąża procesor (%lld%%)" = "%@ is loading the CPU (%lld%%)";
@@ -92,7 +94,7 @@
 "Anulowano – nic nie zostało odczytane." = "Cancelled – nothing was read.";
 "Anuluj" = "Cancel";
 "Aplikacja %@ jest uruchomiona – zamknij ją przed usunięciem." = "The app %@ is running – quit it before removing.";
-"Aplikacja często się zawiesza" = "An app crashes often";
+"Aplikacja często ulega awarii" = "An app crashes often";
 "Aplikacja działa – zamknij ją i spróbuj ponownie" = "The app is running – quit it and try again";
 "Aplikacja i wybrane dane trafią do Kosza – przywrócisz je w Finderze" = "The app and the selected data will go to the Trash – you can restore them in Finder";
 "Aplikacja nie istnieje albo jest dowiązaniem" = "The app does not exist or is a link";
@@ -280,12 +282,14 @@
 "Dysk SSD" = "SSD drive";
 "Dysk SSD zarejestrował błędy nośnika (%llu)" = "The SSD has recorded media errors (%llu)";
 "Dysk SSD zgłasza ostrzeżenie sprzętowe" = "The SSD reports a hardware warning";
+"Dysk SSD zgłasza zbyt wysoką temperaturę" = "The SSD reports a high temperature";
 "Dysk SSD zużyty w %lld%%" = "SSD wear at %lld%%";
 "Dysk działa prawidłowo." = "The drive is working properly.";
+"Dysk działa, ale warto go obserwować i mieć aktualną kopię zapasową." = "The drive works, but keep an eye on it and keep an up-to-date backup.";
 "Dysk jest prawie pełny.%@ Warto zwolnić trochę miejsca." = "The disk is almost full.%@ It is worth freeing up some space.";
 "Dysk zapełnia się powoli." = "The disk is filling up slowly.";
 "Dysk zgłasza problem – zrób kopię zapasową." = "The drive reports a problem – make a backup.";
-"Działa, gdy MacCare jest uruchomiony (także tylko jako ikona w pasku menu) i nie korzystasz akurat z jego okna. Wyłącznie sprawdza – niczego nie usuwa. Podsumowanie przychodzi jako powiadomienie, jeśli powiadomienia są włączone. Pomijany w trybie Edycja, w trybie niskiego zużycia energii i gdy masz zaznaczone elementy w Porządkach." = "Runs while MacCare is open (also as just the menu bar icon) and you are not using its window. It only checks – it deletes nothing. The summary arrives as a notification if notifications are on. Skipped in Edit mode, in Low Power Mode and when you have items selected in Cleanup.";
+"Działa, gdy MacCare jest uruchomiony (także tylko jako ikona w pasku menu) i nie korzystasz akurat z jego okna. Wyłącznie sprawdza – niczego nie usuwa. Podsumowanie przychodzi jako powiadomienie, jeśli powiadomienia są włączone. Pomijany w trybie Edycja, w trybie niskiego zużycia energii i gdy sam zmieniłeś zaznaczenie w Porządkach (żeby nie podmienić listy, nad którą pracujesz)." = "Runs while MacCare is open (also as just the menu bar icon) and you are not using its window. It only checks – it deletes nothing. The summary arrives as a notification if notifications are on. Skipped in Edit mode, in Low Power Mode and when you have changed the selection in Cleanup yourself (so the list you are working on is not replaced).";
 "Dziennik jest pusty" = "The log is empty";
 "Dziennik operacji" = "Operations log";
 "Dzienniki" = "Logs";
@@ -308,7 +312,7 @@
 "Elementy (%lld)" = "Items (%lld)";
 "Elementy trafiły do kwarantanny (przeniesienie w obrębie dysku) lub do Kosza – wolne miejsce zwiększy się dopiero po opróżnieniu kwarantanny (automatycznie po 7 dniach) lub Kosza. Pomiar obejmuje też inne zapisy na dysku." = "The items went to quarantine (a move within the disk) or to the Trash – free space will grow only after the quarantine (automatically after 7 days) or the Trash is emptied. The measurement also includes other writes to the disk.";
 "Elementy trafiły do systemowego Kosza (przeniesienie w obrębie dysku) – wolne miejsce zwiększy się dopiero po opróżnieniu Kosza w Finderze. Możesz je stamtąd przywrócić (Odłóż)." = "The items went to the system Trash (a move within the disk) – free space will grow only after you empty the Trash in Finder. You can restore them from there (Put Back).";
-"Elementy uruchamiane przy logowaniu i działające w tle wyłączysz w Ustawieniach systemowych → Ogólne → Elementy logowania i rozszerzenia. MacCare sam niczego nie wyłącza." = "Turn off items that start at login or run in the background in System Settings → General → Login Items & Extensions. MacCare does not turn anything off itself.";
+"Elementy uruchamiane przy logowaniu i działające w tle wyłączysz w Ustawieniach systemowych → Ogólne → Elementy logowania (w macOS 15 i nowszych: Elementy logowania i rozszerzenia). MacCare sam niczego nie wyłącza." = "Turn off items that start at login or run in the background in System Settings → General → Login Items (on macOS 15 and later: Login Items & Extensions). MacCare does not turn anything off itself.";
 "Elementy w katalogu tymczasowym nieużywane od 3 dni. Długo działające programy mogą tu trzymać blokady i gniazda – dlatego nie są zaznaczane same." = "Items in the temporary folder unused for 3 days. Long-running programs may keep locks and sockets here – so they are not selected automatically.";
 "Elementy z kwarantanny przywrócisz w Historii; elementy z Kosza – z Findera (%lld)." = "Restore quarantined items in History; items in the Trash – from Finder (%lld).";
 "Elementów Apple nie można wyłączyć." = "Apple items cannot be disabled.";
@@ -436,6 +440,7 @@
 "Maven – lokalne repozytorium" = "Maven – local repository";
 "Mało miejsca na dysku" = "Low disk space";
 "Mało wolnego miejsca na dysku" = "Low free disk space";
+"Mało wolnego miejsca: %@." = "Low free space: %@.";
 "Metodologia oceny v%@" = "Scoring methodology v%@";
 "Metodologia v%@: każdy komponent liczony wyłącznie z pomiarów, brak danych nie podnosi oceny." = "Methodology v%@: every component is computed only from measurements; missing data never raises the score.";
 "Microsoft Edge – pamięć podręczna" = "Microsoft Edge – cache";
@@ -444,7 +449,7 @@
 "Miejsce docelowe jest zajęte: %@" = "The destination is occupied: %@";
 "Miejsce przywrócenia jest niedozwolone – nic nie ruszono: %@" = "The restore location is not allowed – nothing was touched: %@";
 "Miejsce przywrócenia leży poza katalogiem domowym i lokalizacjami czyszczenia" = "The restore location is outside the home folder and the cleanup locations";
-"Miejsce wraca po opróżnieniu Kosza lub kwarantanny (ta czyści się sama po 7 dniach)." = "Space comes back after emptying the Trash or quarantine (quarantine empties itself after 7 days).";
+"Miejsce wraca dopiero po opróżnieniu Kosza w Finderze." = "The space comes back only after you empty the Trash in Finder.";
 "Mierzę obciążenie procesora, pamięci i baterii…" = "Measuring CPU, memory and battery load…";
 "Migawki Time Machine trzymają miejsce, które system zwolni sam" = "Time Machine snapshots hold space that the system will free by itself";
 "Minimalny" = "Minimal";
@@ -458,7 +463,7 @@
 "Model zaproponował operację – w trybie automatycznym wykonuję tylko zaplanowane czynności" = "The model proposed an operation – in automatic mode I only run scheduled tasks";
 "Model zwrócił odpowiedź w złym formacie." = "The model returned an answer in the wrong format.";
 "Modele AI" = "AI models";
-"Modele działają lokalnie przez Ollamę (127.0.0.1) – dane nie opuszczają Maca, a MacCare niczego nie pobiera sam. „Automatycznie” wybiera zainstalowany model, który teraz zmieści się w pamięci (najpierw qwen2.5, potem Bielik)." = "Models run locally through Ollama (127.0.0.1) – data never leaves your Mac and MacCare downloads nothing by itself. “Automatic” picks an installed model that fits in memory right now (qwen2.5 first, then Bielik).";
+"Modele działają lokalnie przez Ollamę (127.0.0.1) – dane nie opuszczają Maca, a MacCare niczego nie pobiera sam. „Automatycznie” wybiera zainstalowany model, który teraz zmieści się w pamięci (kolejno: qwen2.5, qwen3, Bielik, Llama 3, Mistral, Gemma)." = "Models run locally through Ollama (127.0.0.1) – data does not leave your Mac, and MacCare downloads nothing by itself. “Automatic” picks an installed model that fits in memory right now (in order: qwen2.5, qwen3, Bielik, Llama 3, Mistral, Gemma).";
 "Modele i zbiory danych z hub. Pobiorą się ponownie (często wiele GB)." = "Models and datasets from the hub. They will download again (often many GB).";
 "Modele rozpoznawania mowy." = "Speech recognition models.";
 "Mogą być ważne – zawsze do przejrzenia, trafiają do Kosza." = "May be important – always to review, they go to the Trash.";
@@ -471,6 +476,7 @@
 "Na dysku jest %lld lokalnych migawek, a %@ liczy się jako „do odzyskania przez system”. Usunięcie plików objętych migawką nie zwiększy wolnego miejsca, dopóki migawki nie wygasną (zwykle do 24 godz.) – dlatego sprzątanie pamięci podręcznej bywa tu mało skuteczne. macOS zwalnia je sam, gdy brakuje miejsca." = "There are %lld local snapshots on the disk, and %@ counts as “reclaimable by the system”. Deleting files covered by a snapshot will not increase free space until the snapshots expire (usually within 24 hours) – which is why clearing caches can be ineffective here. macOS frees them by itself when space runs low.";
 "Na dysku startowym zostało %@ (%lld%%). " = "%@ left on the startup disk (%lld%%). ";
 "Nadal zablokowane – dostępne po zakończeniu poprawek bezpieczeństwa kwarantanny" = "Still locked – available once the quarantine security fixes are finished";
+"Najbardziej urosły od %@: %@." = "Grew the most since %@: %@.";
 "Najbardziej urosły: %@." = "Grew the most: %@.";
 "Najwięksi konsumenci" = "Top consumers";
 "Największe pliki" = "Largest files";
@@ -540,6 +546,7 @@
 "Nieużywana aplikacja zajmuje dużo pamięci" = "An idle app uses a lot of memory";
 "Nieużywane" = "Unused";
 "Nieużywane 90+ dni" = "Unused 90+ days";
+"Niezakończone procesy w tle" = "Unfinished background processes";
 "Nieznane narzędzie" = "Unknown tool";
 "Nieznane narzędzie: %@" = "Unknown tool: %@";
 "Nieznany argument: %@" = "Unknown argument: %@";
@@ -588,7 +595,7 @@
 "Odrzucono: %@" = "Rejected: %@";
 "Odznacz wszystkie" = "Deselect all";
 "Odzyskane zostanie ok. %@. Elementów nie będzie można przywrócić." = "About %@ will be reclaimed. The items cannot be restored.";
-"Odzyskiwalne: %@ z %@. Resztę trzymają klony APFS, twarde dowiązania lub lokalne migawki Time Machine (obecnie: %lld); wróci po ich wygaśnięciu (zwykle do 24 godz.)." = "Reclaimable: %@ of %@. The rest is held by APFS clones, hard links or local Time Machine snapshots (currently: %lld); it comes back once they expire (usually within 24 hours).";
+"Odzyskiwalne: %@ z %@. Resztę trzymają klony APFS, twarde dowiązania lub lokalne migawki Time Machine (obecnie: %@); wróci po ich wygaśnięciu (zwykle do 24 godz.)." = "Reclaimable: %@ of %@. The rest is held by APFS clones, hard links or local Time Machine snapshots (currently: %@); it comes back when they expire (usually within 24 hours).";
 "Odzyskiwanie kwarantanny po awarii" = "Quarantine recovery after a crash";
 "Odśwież" = "Refresh";
 "Ograniczanie wydajności (throttling)" = "Performance throttling";
@@ -691,6 +698,7 @@
 "Pojemność baterii spadła do %lld%%" = "Battery capacity has dropped to %lld%%";
 "Pokazujemy fakty i dowody. MacCare niczego nie wyłącza ani nie usuwa." = "We show facts and evidence. MacCare does not disable or remove anything.";
 "Pokaż dowód (pomiar)" = "Show evidence (measurement)";
+"Pokaż elementy kategorii" = "Show items in this category";
 "Pokaż mniej" = "Show less";
 "Pokaż największe pliki" = "Show the largest files";
 "Pokaż w Finderze" = "Show in Finder";
@@ -1116,7 +1124,6 @@
 "Zatwierdź i wykonaj" = "Approve and run";
 "Zatwierdź operację" = "Approve operation";
 "Zawiera chronioną lokalizację: %@" = "Contains a protected location: %@";
-"Zawieszone procesy w tle" = "Hung background processes";
 "Zaznacz %@" = "Select %@";
 "Zaznacz kopię do przeniesienia do Kosza" = "Select this copy to move it to the Trash";
 "Zaznacz nadmiarowe kopie. Jedna kopia z każdej grupy zawsze zostaje." = "Select redundant copies. One copy of each group always remains.";
@@ -1158,12 +1165,14 @@
 "Zwolnienie miejsca na dysku" = "Freeing disk space";
 "Zwolnienie miejsca po odinstalowanych aplikacjach" = "Freeing space after uninstalled apps";
 "Zwolnienie miejsca zajętego przez kwarantannę" = "Freeing the space used by quarantine";
+"Zwykle przejściowe przy dużym obciążeniu. Jeśli się powtarza, sprawdź wentylację Maca i zamknij programy mocno zapisujące na dysk." = "Usually temporary under heavy load. If it keeps happening, check your Mac's ventilation and quit programs that write heavily to the disk.";
 "Zwykle znikają po restarcie Maca." = "They usually disappear after restarting your Mac.";
 "adres nielokalny" = "non-local address";
 "aktualizacji – system aktualny" = "updates – system up to date";
 "anulowano" = "cancelled";
 "aplikacja uruchomiona" = "app running";
 "baza zapisana przez nowszą wersję MacCare (schemat %lld > %lld) – nie jest zmieniana" = "database written by a newer MacCare version (schema %lld > %lld) – left unchanged";
+"bez kontenera Safari" = "without the Safari container";
 "bezpieczne" = "safe";
 "brak" = "none";
 "brak (opcjonalny)" = "none (optional)";
@@ -1171,9 +1180,11 @@
 "brak danych" = "no data";
 "brak dostępu do %@ (%@%@) – nie ma ich na mapie" = "no access to %@ (%@%@) – they are not on the map";
 "brak mierzalnego efektu" = "no measurable effect";
+"brak odcisku z chwili zaznaczenia – zaznacz element ponownie" = "no fingerprint from when it was selected – select the item again";
 "błąd" = "error";
 "chroniona lokalizacja" = "protected location";
 "chroniony obszar" = "protected area";
+"co najmniej %@" = "at least %@";
 "cykle: —" = "cycles: —";
 "czeka na zgodę" = "awaiting approval";
 "dane aplikacji" = "app data";
@@ -1197,7 +1208,6 @@
 "kondycja baterii: " = "battery condition: ";
 "krytyczne" = "critical";
 "krytyczny" = "critical";
-"kwarantanna" = "quarantine";
 "leży na innym wolumenie niż katalog domowy – Kosz działa tam inaczej" = "lies on a different volume than the home folder – the Trash works differently there";
 "liczę…" = "calculating…";
 "macOS nie pozwala MacCare wyświetlać powiadomień – włącz je w Ustawieniach systemowych → Powiadomienia." = "macOS does not allow MacCare to show notifications – turn them on in System Settings → Notifications.";
@@ -1247,6 +1257,7 @@
 "przeniesiono %@ · pozostało %lld dn. do automatycznego usunięcia" = "moved %@ · %lld days left until automatic deletion";
 "przypuszczenie" = "guess";
 "przyznany" = "granted";
+"różne" = "various";
 "różne obciążenie tła (%lld%% → %lld%%)" = "different background load (%lld%% → %lld%%)";
 "system nie udostępnia kondycji" = "the system does not report the condition";
 "słaba" = "poor";
@@ -1256,6 +1267,7 @@
 "tło – nie wlicza się do oceny" = "background – not counted in the verdict";
 "ustaleń: %lld" = "findings: %lld";
 "usług nasłuchuje z sieci" = "services listening on the network";
+"użytkownik" = "user";
 "używana dziś" = "used today";
 "w kontenerze Safari – nie sprawdzamy" = "in the Safari container – not checked";
 "waga %lld%%" = "weight %lld%%";
