@@ -39,11 +39,12 @@ public enum ImageHasher {
         let deadline = Date().addingTimeInterval(timeLimit)
         var entries: [FileEntry] = []
         var complete = true
-        DiskAnalyzer.enumerate(root: root, deadline: deadline, isCancelled: isCancelled) { f in
+        let walk = DiskAnalyzer.enumerate(root: root, deadline: deadline, minSize: minSize, isCancelled: isCancelled) { f in
             guard f.size >= minSize, extensions.contains((f.path as NSString).pathExtension.lowercased()),
                   !DuplicateFinder.skippedKinds.contains(f.kind), !f.path.contains("/.Trash/") else { return }
             if entries.count < maxImages { entries.append(f) } else { complete = false }
         }
+        if !walk.isComplete { complete = false }                                            // audyt 2: foldery bez dostępu / limit czasu = niepełny
         var hashes: [(path: String, hash: UInt64)] = []
         for e in entries {
             if isCancelled() || Date() > deadline.addingTimeInterval(timeLimit) { complete = false; break }

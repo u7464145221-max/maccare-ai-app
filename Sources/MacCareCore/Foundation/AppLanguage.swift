@@ -32,6 +32,7 @@ public enum EnglishPlurals {
         "regułę|reguły|reguł": ("rule", "rules"),
         "spoza systemu zajmuje|spoza systemu zajmują|spoza systemu zajmuje": ("non-system app takes", "non-system apps take"),
         "sprawa do sprawdzenia|sprawy do sprawdzenia|spraw do sprawdzenia": ("issue to check", "issues to check"),
+        "sprawa wymaga|sprawy wymagają|spraw wymaga": ("issue needs", "issues need"),
         "zadanie|zadania|zadań": ("task", "tasks"),
         "zdjęcia|zdjęć|zdjęć": ("photo", "photos"),
         "aktualizacja Apple czeka|aktualizacje Apple czekają|aktualizacji Apple czeka": ("Apple update is waiting", "Apple updates are waiting"),

@@ -86,12 +86,23 @@ struct FilesView: View {
     }
 
     // MARK: Duże pliki
+    /// Audyt 2 (3.3): wynik niepełny jest oznaczony – jak w Duplikatach i Podobnych zdjęciach.
+    static func largeFilesNote(_ c: DiskAnalyzer.Completeness) -> String? {
+        if c.timedOut { return String(localized: "Wynik niepełny: przeszukiwanie przerwano po limicie czasu – część folderów nie została sprawdzona.") }
+        if c.unreadableDirectories > 0 { return String(localized: "Wynik niepełny: brak dostępu do \(c.unreadableDirectories) folderów (np. bez Pełnego dostępu do dysku).") }
+        return nil
+    }
+
     private var largeView: some View {
         SurfaceCard(padding: 0, radius: 24) {
             VStack(spacing: 0) {
                 HStack { Text("Największe pliki (≥ 500 MB, bez ~/Library)").font(Theme.Typo.headline).foregroundStyle(Theme.Palette.text); Spacer()
                     if largeLoading { ProgressView().controlSize(.small) } else { Button("Odśwież") { loadLarge(force: true) }.buttonStyle(.soft) } }
                     .padding(14)
+                if let note = Self.largeFilesNote(map.largeFilesCompleteness) {
+                    Label(note, systemImage: "exclamationmark.triangle.fill").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.warning)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 14).padding(.bottom, 10)
+                }
                 Divider().opacity(0.3)
                 List(large) { f in
                     HStack(spacing: 10) {
@@ -108,7 +119,7 @@ struct FilesView: View {
                     }
                 }
                 .listStyle(.plain).scrollContentBackground(.hidden)
-                .overlay { if large.isEmpty && !largeLoading { Text("Brak plików spełniających kryteria.").foregroundStyle(Theme.Palette.textSecondary) } }
+                .overlay { if large.isEmpty && !largeLoading { Text(map.largeFilesCompleteness.isComplete ? String(localized: "Brak plików spełniających kryteria.") : String(localized: "Nie znaleziono – ale wynik jest niepełny (patrz wyżej).")).foregroundStyle(Theme.Palette.textSecondary) } }
             }
         }
     }

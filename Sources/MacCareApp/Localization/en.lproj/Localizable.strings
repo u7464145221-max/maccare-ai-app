@@ -12,7 +12,7 @@
 " Pominięto %lld (nie spełniały zasad bezpieczeństwa lub zmieniły się od zaznaczenia)." = " Skipped %lld (did not meet the safety rules or changed since selection).";
 " Z tego %@ system może zwolnić sam (purgeable)." = " Of this, the system can free %@ by itself (purgeable).";
 " · niemierzalnych procesów systemowych: %lld (bez uprawnień nie widać ich zużycia)" = " · system processes not measurable: %lld (their usage is not visible without permissions)";
-" · powrót do odczytu za %@" = " · back to read-only in %@";
+" · tylko „Przenieś do Kosza” (Moje pliki, Porządki, Aplikacje)" = " · only “Move to Trash” (My Files, Cleanup, Apps)";
 " · zajęte %@ (resztę trzymają migawki lub klony%@)" = " · allocated %@ (the rest is held by snapshots or clones%@)";
 " · zmiana %@" = " · modified %@";
 " – aktualizacja systemu jest szczególnie ważna" = " – the system update is especially important";
@@ -22,12 +22,14 @@
 "%@ do rozważenia" = "%@ to consider";
 "%@ mocno obciąża procesor" = "%@ is putting a heavy load on the CPU";
 "%@ obciąża procesor (%lld%%)" = "%@ is loading the CPU (%lld%%)";
-"%@ oceny eksperckiej i %@ w trybie Prostym." = "%@ expert review and %@ in Simple mode.";
+"%@ oceny eksperckiej i są ukryte w trybie Prostym." = "%@ expert review and are hidden in Simple mode.";
 "%@ od %@" = "%@ since %@";
 "%@ podobnych zdjęć (sprawdzono %lld)" = "%@ of similar photos (%lld checked)";
 "%@ trafi do Kosza (%@). Miejsce na dysku wróci dopiero po opróżnieniu Kosza w Finderze." = "%@ will go to the Trash (%@). Disk space comes back only after emptying the Trash in Finder.";
 "%@ trafi do Kosza. Miejsce na dysku wróci dopiero po opróżnieniu Kosza w Finderze." = "%@ will go to the Trash. Disk space comes back only after emptying the Trash in Finder.";
 "%@ wewnątrz folderów bez dostępu – ich rozmiary są zaniżone" = "%@ inside folders without access – their sizes are understated";
+"%@ z %@" = "%@ of %@";
+"%@ z %@ (%lld%%)" = "%@ of %@ (%lld%%)";
 "%@ z %@ w użyciu" = "%@ of %@ in use";
 "%@ z %@ · ciśnienie %@" = "%@ of %@ · pressure %@";
 "%@ zajmuje dużo pamięci, choć nic nie robi" = "%@ uses a lot of memory while idle";
@@ -44,7 +46,6 @@
 "%@ · wszystkie systemowe" = "%@ · all from the system";
 "%@ · zmiana %@ · ostatnio użyty %@" = "%@ · modified %@ · last used %@";
 "%@, %@, %@" = "%@, %@, %@";
-"%@. Zobaczysz %@ po skanie albo w trybie Profesjonalnym." = "%@. You will see %@ after a scan or in Professional mode.";
 "%@: %@ → %@ · %@" = "%@: %@ → %@ · %@";
 "%@: Kosz opróżnia się osobnym narzędziem" = "%@: the Trash is emptied with a separate tool";
 "%@: aplikacja %@ jest uruchomiona" = "%@: the app %@ is running";
@@ -57,6 +58,7 @@
 "%@: odrzucone przez politykę ścieżek" = "%@: rejected by the path policy";
 "%@: zajęte %@ z %@" = "%@: %@ used of %@";
 "%@: zmienił się od wyboru – odśwież listę" = "%@: changed since you selected it – refresh the list";
+"%lld (najnowsza: %@)" = "%lld (newest: %@)";
 "%lld cykli" = "%lld cycles";
 "%lld do instalacji" = "%lld to install";
 "%lld proc. · %@" = "%lld proc. · %@";
@@ -65,12 +67,14 @@
 "%lld różnych programów" = "%lld different programs";
 "%lld wskazanych identyfikatorów nie istnieje w kwarantannie." = "%lld of the given identifiers do not exist in quarantine.";
 "%lld%%" = "%lld%%";
+"%lld%% (ładowanie)" = "%lld%% (charging)";
 "%lld/100" = "%lld/100";
 "%lld× · %@ · ostatni %@" = "%lld× · %@ · last %@";
 ", migawek: %lld" = ", snapshots: %lld";
 "- %@: CPU %lld%%, pamięć %@, procesów %lld%@ [dowód: proc.%@.%@]" = "- %@: CPU %lld%%, memory %@, processes %lld%@ [evidence: proc.%@.%@]";
 ". To tylko podgląd – nic nie zostanie zmienione." = ". This is only a preview – nothing will be changed.";
 ". To ustawienie systemu – możesz je włączyć samodzielnie w Ustawieniach." = ". This is a system setting – you can turn it on yourself in System Settings.";
+"1 pozycja wymaga oceny eksperckiej i jest ukryta w trybie Prostym." = "1 item needs expert review and is hidden in Simple mode.";
 "; niemierzalnych procesów systemowych: %lld [dowód: proc.unmeasured]" = "; system processes not measurable: %lld [evidence: proc.unmeasured]";
 "ASYSTENT:" = "ASSISTANT:";
 "Adres Ollamy nie jest lokalny – zablokowano, aby dane nie opuszczały komputera." = "The Ollama address is not local – blocked so data does not leave the computer.";
@@ -269,10 +273,11 @@
 "Edycja wyłącza się sama" = "Edit turns itself off";
 "Edycja wyłączona automatycznie po %@ bezczynności – powrót do trybu tylko do odczytu." = "Edit turned off automatically after %@ of inactivity – back to read-only mode.";
 "Edycja wyłączona po %@ bezczynności – wróciłem do trybu tylko do odczytu." = "Edit turned off after %@ of inactivity – I'm back in read-only mode.";
-"Edycja włączona – tylko „Przenieś do Kosza” (Moje pliki, Porządki, Aplikacje)%@" = "Edit mode on – only “Move to Trash” (My Files, Cleanup, Apps)%@";
+"Edycja włączona" = "Edit mode on";
 "Edycja włączona. Zaznacz pliki w „Moje pliki”, aby przenieść je do Kosza." = "Edit mode on. Select files in “My Files” to move them to the Trash.";
 "Edycja włączona. Zaznaczone pliki przeniesiesz do Kosza w „Moje pliki” (widok Profesjonalny)." = "Edit mode on. Move selected files to the Trash in “My Files” (Professional view).";
 "Edycja – odblokowuje wyłącznie przenoszenie do Kosza: pliki zaznaczone w „Moje pliki”, pozycje zaznaczone w Porządkach, odinstalowanie wybranej aplikacji i zaznaczone pozostałości po aplikacjach, zawsze po potwierdzeniu. Czyszczenie przez kwarantannę, trwałe usuwanie, opróżnianie Kosza, agenci autostartu i polecenia administratora czekają na poprawki bezpieczeństwa kwarantanny. Asystent AI nigdy nie przełącza trybu." = "Edit – unlocks only moving to the Trash: files selected in “My Files”, items selected in Cleanup, uninstalling a chosen app and selected app leftovers, always after confirmation. Cleaning through quarantine, permanent deletion, emptying the Trash, login agents and administrator commands wait for the quarantine safety fixes. The AI assistant never switches the mode.";
+"Edycja: %@ do powrotu do odczytu" = "Edit mode: %@ until read-only";
 "Edycja: działa tylko „Przenieś do Kosza” (Moje pliki, Porządki, odinstalowanie i pozostałości po aplikacjach); wszystko inne czeka na zakończenie poprawek bezpieczeństwa kwarantanny." = "Edit mode: only “Move to Trash” works (My Files, Cleanup, uninstalling and app leftovers); everything else waits for the quarantine safety fixes.";
 "Element chroniony przez system (SIP) albo zablokowany przed zmianami" = "Item protected by the system (SIP) or locked against changes";
 "Element logowania" = "Login item";
@@ -280,7 +285,6 @@
 "Element w chmurze – Porządki go nie ruszają (usunięcie skasowałoby go też w chmurze)" = "Item in the cloud – Cleanup leaves it alone (removing it would also delete it from the cloud)";
 "Element w tle (BTM)" = "Background item (BTM)";
 "Elementy (%lld)" = "Items (%lld)";
-"Elementy przeniesione przez Czyszczenie pojawią się tutaj i będzie można je przywrócić." = "Items moved by Cleanup will appear here and can be restored.";
 "Elementy trafiły do kwarantanny (przeniesienie w obrębie dysku) lub do Kosza – wolne miejsce zwiększy się dopiero po opróżnieniu kwarantanny (automatycznie po 7 dniach) lub Kosza. Pomiar obejmuje też inne zapisy na dysku." = "The items went to quarantine (a move within the disk) or to the Trash – free space will grow only after the quarantine (automatically after 7 days) or the Trash is emptied. The measurement also includes other writes to the disk.";
 "Elementy trafiły do systemowego Kosza (przeniesienie w obrębie dysku) – wolne miejsce zwiększy się dopiero po opróżnieniu Kosza w Finderze. Możesz je stamtąd przywrócić (Odłóż)." = "The items went to the system Trash (a move within the disk) – free space will grow only after you empty the Trash in Finder. You can restore them from there (Put Back).";
 "Elementy w katalogu tymczasowym nieużywane od 3 dni. Długo działające programy mogą tu trzymać blokady i gniazda – dlatego nie są zaznaczane same." = "Items in the temporary folder unused for 3 days. Long-running programs may keep locks and sockets here – so they are not selected automatically.";
@@ -336,6 +340,8 @@
 "Jak wygląda stan baterii i temperatury?" = "What is the state of the battery and temperature?";
 "Jedna aplikacja mocno obciąża procesor" = "One app is putting a heavy load on the CPU";
 "Jedno skanowanie sprawdzi porządki, ochronę i wydajność – bez zmieniania czegokolwiek." = "One scan checks cleanup, protection and performance – without changing anything.";
+"Jest jeszcze %@. Zobaczysz je po skanie albo w trybie Profesjonalnym." = "There are %@ more. You will see them after a scan or in Professional mode.";
+"Jest jeszcze 1 mniej ważna sprawa. Zobaczysz ją po skanie albo w trybie Profesjonalnym." = "There is 1 more minor issue. You will see it after a scan or in Professional mode.";
 "JetBrains – pamięć podręczna IDE" = "JetBrains – IDE cache";
 "Katalogi w ~/Library/Caches bez dedykowanej reguły. Zwykle odtwarzalne, ale nie zawsze – do przejrzenia, domyślnie niezaznaczone." = "Folders in ~/Library/Caches without a dedicated rule. Usually recreatable, but not always – to review, unselected by default.";
 "Każda próba operacji – także odrzucona lub anulowana – zostawia tu ślad." = "Every operation attempt – including rejected or cancelled ones – leaves a record here.";
@@ -348,6 +354,7 @@
 "Komponent" = "Component";
 "Kondycja < 60%" = "Condition < 60%";
 "Kondycja < 80%" = "Condition < 80%";
+"Kondycja baterii" = "Battery health";
 "Konfiguracja DNS tego Maca (serwery, domeny wyszukiwania) – bez wysyłania zapytań." = "This Mac's DNS configuration (servers, search domains) – without sending any queries.";
 "Kontekst przekracza okno modelu" = "The context exceeds the model window";
 "Kontenery" = "Containers";
@@ -373,6 +380,7 @@
 "Liczę rozmiary folderów…" = "Counting folder sizes…";
 "Liczę rozmiary…" = "Calculating sizes…";
 "Limit narzędzi wyczerpany. Udziel odpowiedzi końcowej (type=final) na podstawie zebranych danych." = "Tool limit reached. Give the final answer (type=final) based on the collected data.";
+"Listy autostartu jeszcze nie odczytano albo odczyt się nie udał." = "The login items list has not been read yet or could not be read.";
 "Logi Docker Desktop starsze niż 7 dni. Kontenery, obrazy i wolumeny nie są ruszane." = "Docker Desktop logs older than 7 days. Containers, images and volumes are not touched.";
 "Logi OrbStack starsze niż 7 dni. Maszyny i kontenery nie są ruszane." = "OrbStack logs older than 7 days. Machines and containers are not touched.";
 "Logi serwera LM Studio starsze niż 7 dni. Modele zostają." = "LM Studio server logs older than 7 days. Models stay.";
@@ -380,6 +388,7 @@
 "Logi zapisane przez aplikacje. Starsze niż 14 dni." = "Logs written by apps. Older than 14 days.";
 "Lokalizacje bez uprawnień są raportowane jako nieczytelne." = "Locations without permissions are reported as unreadable.";
 "Lokalne kopie otwieranych załączników. Oryginały pozostają w wiadomościach na serwerze. Nie dotyczy operacji na serwerze pocztowym." = "Local copies of opened attachments. The originals stay in the messages on the server. No operations on the mail server.";
+"Lokalne migawki Time Machine" = "Local Time Machine snapshots";
 "Lokalny model jest niedostępny." = "The local model is unavailable.";
 "Lokalny model nie działa: Ollama nie odpowiada pod 127.0.0.1:11434. Uruchom aplikację Ollama (dane nie opuszczają Maca)." = "The local model is not running: Ollama does not respond at 127.0.0.1:11434. Start the Ollama app (data never leaves your Mac).";
 "MLX nie jest włączony" = "MLX is not enabled";
@@ -407,6 +416,7 @@
 "Metodologia v%@: każdy komponent liczony wyłącznie z pomiarów, brak danych nie podnosi oceny." = "Methodology v%@: every component is computed only from measurements; missing data never raises the score.";
 "Microsoft Edge – pamięć podręczna" = "Microsoft Edge – cache";
 "Microsoft Teams – pamięć podręczna" = "Microsoft Teams – cache";
+"Miejsce do odzyskania przez system (purgeable)" = "Space the system can reclaim (purgeable)";
 "Miejsce docelowe jest zajęte: %@" = "The destination is occupied: %@";
 "Miejsce przywrócenia jest niedozwolone – nic nie ruszono: %@" = "The restore location is not allowed – nothing was touched: %@";
 "Miejsce przywrócenia leży poza katalogiem domowym i lokalizacjami czyszczenia" = "The restore location is outside the home folder and the cleanup locations";
@@ -459,6 +469,7 @@
 "Nic nie zostanie zmienione." = "Nothing will be changed.";
 "Nic niepokojącego nie znaleziono" = "Nothing suspicious found";
 "Nic niepokojącego nie znaleziono." = "Nothing suspicious found.";
+"Nic niepokojącego w odczytanych danych – części nie udało się odczytać" = "Nothing worrying in the data that was read – some of it could not be read";
 "Nie nadpisuje istniejących plików." = "Does not overwrite existing files.";
 "Nie odinstalowano: %@." = "Not uninstalled: %@.";
 "Nie opróżniono Kosza: brak dostępu do jego zawartości (uprawnienia lub Pełny dostęp do dysku). Nic nie usunięto." = "The Trash was not emptied: no access to its contents (permissions or Full Disk Access). Nothing was removed.";
@@ -466,6 +477,8 @@
 "Nie przyspiesza ogólnie systemu – rozwiązuje tylko nieaktualne wpisy DNS." = "Does not speed up the system in general – only fixes stale DNS entries.";
 "Nie sprawdzono" = "Not checked";
 "Nie udało się odczytać informacji o wydaniu." = "Could not read the release information.";
+"Nie udało się odczytać listy portów – to nie znaczy, że żaden nie jest otwarty." = "The list of ports could not be read – that does not mean none is open.";
+"Nie udało się odczytać raportów awarii – to nie znaczy, że ich nie ma." = "Crash reports could not be read – that does not mean there are none.";
 "Nie udało się otworzyć bazy historii – historia i ustawienia z tej sesji nie zostaną zapisane po zamknięciu aplikacji." = "Could not open the history database – history and settings from this session will not be saved after the app quits.";
 "Nie udało się przenieść aplikacji do Kosza (%@). Jej danych nie ruszono – usuń aplikację w Finderze." = "Could not move the app to the Trash (%@). Its data was not touched – remove the app in Finder.";
 "Nie udało się przenieść: %@" = "Could not move: %@";
@@ -489,6 +502,7 @@
 "Nie znaleziono nic do usunięcia w znanych lokalizacjach." = "Nothing to remove was found in known locations.";
 "Nie znaleziono podobnych zdjęć wśród %@." = "No similar photos found among %@.";
 "Nie znaleziono pozostałości." = "No leftovers found.";
+"Nie znaleziono – ale wynik jest niepełny (patrz wyżej)." = "None found – but the result is incomplete (see above).";
 "Niedozwolone znaki sterujące w %@" = "Control characters not allowed in %@";
 "Niedozwolony znak w ścieżce" = "Character not allowed in the path";
 "Nieprawidłowa etykieta agenta" = "Invalid agent label";
@@ -513,6 +527,7 @@
 "Obciążenie utrzymuje się od %lld s – to nie jest chwilowy skok." = "The load has persisted for %lld s – this is not a momentary spike.";
 "Obrazy" = "Images";
 "Obrazy dysków" = "Disk images";
+"Ocena bez potrąceń, ale %@ uwagi – szczegóły poniżej." = "No score deductions, but %@ attention – details below.";
 "Ocena stanu" = "Health score";
 "Ocena stanu: %lld/100" = "Health score: %lld/100";
 "Ocena stanu: %lld/100 – z jawną metodologią i dowodami." = "Health score: %lld/100 – with a transparent method and evidence.";
@@ -562,6 +577,7 @@
 "Operacji nie można cofnąć." = "The operation cannot be undone.";
 "Operacji nie wykonuje się w trakcie analizy. Umieść ją w proposed_actions odpowiedzi końcowej." = "Operations are not run during analysis. Put it in proposed_actions of the final answer.";
 "Operację można cofnąć." = "The operation can be undone.";
+"Opróżnianie Kosza MacCare tylko pokazuje – opróżnisz go w Finderze (Kosz → Opróżnij)." = "MacCare only previews emptying the Trash – empty it in Finder (Trash → Empty).";
 "Opróżnienie Kosza" = "Emptying the Trash";
 "Opróżnienie Kosza (%@)" = "Emptying the Trash (%@)";
 "Opróżnienie Kosza – brak dostępu do Kosza" = "Emptying the Trash – no access to the Trash";
@@ -667,6 +683,7 @@
 "Porty" = "Ports";
 "Porządki" = "Cleanup";
 "Porządki i odzyskiwalne miejsce" = "Cleanup and reclaimable space";
+"Porządki przenoszą dziś elementy do systemowego Kosza (przywrócisz je w Finderze) – kwarantanna jest wyłączona." = "Cleanup currently moves items to the system Trash (restore them in Finder) – quarantine is turned off.";
 "Porządki – przeniesienie do Kosza" = "Cleanup – move to Trash";
 "Porządki: %@ do Kosza" = "Cleanup: %@ to the Trash";
 "Porównuję miniatury zdjęć…" = "Comparing photo thumbnails…";
@@ -674,7 +691,6 @@
 "Potwierdzone pomiarem" = "Confirmed by measurement";
 "Powiadamiaj o ważnych sprawach" = "Notify me about important things";
 "Powiadomienia" = "Notifications";
-"Powiadomienia i progi ostrzeżeń pojawią się w kolejnej wersji." = "Notifications and warning thresholds will come in a later version.";
 "Powody" = "Reasons";
 "Poza katalogiem domowym – inne wolumeny niż startowy nie są obsługiwane (Kosz działa tam inaczej)" = "Outside the home folder – volumes other than the startup disk are not supported (the Trash works differently there)";
 "Poza zakresem Edycji – w trybie Edycja działa przenoszenie do Kosza (zaznaczone pliki, Porządki, odinstalowanie, pozostałości po aplikacjach); kwarantanna, opróżnianie Kosza i operacje systemowe czekają na poprawki bezpieczeństwa" = "Outside Edit mode scope – Edit mode allows moving to the Trash (selected files, Cleanup, uninstalling, app leftovers); quarantine, emptying the Trash and system operations wait for safety fixes";
@@ -814,7 +830,9 @@
 "Stabilność" = "Stability";
 "Stan Maca w skrócie (procesor, pamięć, wolne miejsce, aktualizacje) i szybki Smart Scan. Tylko odczyt." = "Your Mac at a glance (CPU, memory, free space, updates) and a quick Smart Scan. Read-only.";
 "Stan Maca: %@" = "Mac status: %@";
+"Stan baterii wg systemu" = "Battery condition (system)";
 "Stan okien" = "Saved window state";
+"Stan termiczny" = "Thermal state";
 "Stan termiczny systemu. Czujników SMC nie odczytujemy (wymagają prywatnych interfejsów), więc nie pokazujemy temperatur CPU/GPU." = "System thermal state. SMC sensors are not read (they require private interfaces), so CPU/GPU temperatures are not shown.";
 "Stan termiczny: %@. macOS obniża taktowanie, żeby się schłodzić – to wyjaśnia spadek wydajności w tym momencie." = "Thermal state: %@. macOS lowers clock speeds to cool down – this explains the drop in performance right now.";
 "Stan wg systemu: %@" = "State reported by the system: %@";
@@ -855,6 +873,7 @@
 "Ta operacja jest dostępna w trybie Profesjonalnym." = "This operation is available in Professional mode.";
 "Także pliki w chmurze – usunie je też z chmury (%lld)" = "Also cloud files – this removes them from the cloud too (%lld)";
 "Temperatura" = "Temperature";
+"Temperatura baterii" = "Battery temperature";
 "Temperatury poszczególnych rdzeni są niedostępne bez prywatnych interfejsów systemu – nie zgadujemy. Próbka z %@." = "Per-core temperatures are unavailable without private system interfaces – we do not guess. Sample from %@.";
 "Ten Mac nie ma baterii lub system nie udostępnia danych." = "This Mac has no battery or the system does not provide the data.";
 "Ten moduł jest w budowie – funkcja nie jest jeszcze dostępna." = "This module is under construction – the feature is not available yet.";
@@ -867,6 +886,7 @@
 "To spowalnia pracę. Pomoże zamknięcie dużych aplikacji albo restart." = "This slows things down. Quitting large apps or restarting will help.";
 "To urządzenie nie obsługuje Apple Intelligence." = "This device does not support Apple Intelligence.";
 "To wyłącznie odczyt: próbka trwa ok. 1 sekundy i niczego nie zmienia w systemie." = "This is read-only: the sample takes about 1 second and changes nothing in the system.";
+"Transfer dysku (odczyt/zapis)" = "Disk throughput (read/write)";
 "Trwale opróżnia Kosz użytkownika." = "Permanently empties the user's Trash.";
 "Trwale usunięto %@ z kwarantanny (%@)" = "Permanently deleted %@ from quarantine (%@)";
 "Trwale usunięto %@ z kwarantanny (%@).%@" = "Permanently deleted %@ from quarantine (%@).%@";
@@ -883,7 +903,8 @@
 "Tryb widoku" = "View mode";
 "Tryb wykonania" = "Execution mode";
 "Tryb zmieniono na diagnostykę" = "Mode changed to diagnostics";
-"Tryb: %@" = "Mode: %@";
+"Tryb: Edycja" = "Mode: Edit";
+"Tryb: tylko odczyt" = "Mode: read-only";
 "Twój Mac" = "Your Mac";
 "Twój Mac działa dobrze." = "Your Mac is running well.";
 "Tylko Intel" = "Intel only";
@@ -906,7 +927,7 @@
 "Uruchamiane automatycznie programy z katalogu domowego lub Homebrew nie mają zaufanego podpisu – to typowe dla własnych skryptów i środowisk deweloperskich, a nie dla złośliwego oprogramowania. Pierwsze: %@%@." = "Automatically started programs from the home folder or Homebrew have no trusted signature – typical for your own scripts and developer environments, not for malware. First ones: %@%@.";
 "Uruchamiane mogą być aplikacje bez weryfikacji pochodzenia." = "Apps can be opened without verifying their origin.";
 "Uruchom Smart Scan" = "Run Smart Scan";
-"Uruchom Smart Scan w Panelu lub skan w Czyszczeniu." = "Run Smart Scan on the Dashboard or a scan in Cleanup.";
+"Uruchom Smart Scan albo skan w Porządkach." = "Run Smart Scan or a scan in Cleanup.";
 "Uruchom odczyt" = "Run reading";
 "Ustalenia" = "Findings";
 "Ustawienia" = "Settings";
@@ -945,6 +966,7 @@
 "Wolne < 15%" = "Free < 15%";
 "Wolne < 25%" = "Free < 25%";
 "Wolne < 5%" = "Free < 5%";
+"Wolne miejsce (dysk startowy)" = "Free space (startup disk)";
 "Wolne miejsce na dysku" = "Free disk space";
 "Wolne na dysku" = "Free disk space";
 "Wpis kwarantanny wskazuje poza jej katalog (uszkodzony lub podmieniony manifest) – nic nie ruszono: %@" = "A quarantine entry points outside its folder (damaged or replaced manifest) – nothing was touched: %@";
@@ -976,6 +998,8 @@
 "Wynik" = "Score";
 "Wynik częściowy: przekroczono limit czasu lub liczby plików – nie wszystkie pliki zostały porównane." = "Partial result: the time or file limit was exceeded – not all files were compared.";
 "Wynik częściowy: przekroczono limit czasu lub liczby zdjęć – nie wszystkie zdjęcia zostały porównane." = "Partial result: the time or photo limit was exceeded – not all photos were compared.";
+"Wynik niepełny: brak dostępu do %lld folderów (np. bez Pełnego dostępu do dysku)." = "Incomplete result: no access to %lld folders (e.g. without Full Disk Access).";
+"Wynik niepełny: przeszukiwanie przerwano po limicie czasu – część folderów nie została sprawdzona." = "Incomplete result: the search stopped at the time limit – some folders were not checked.";
 "Wynik ogólny:" = "Overall score:";
 "Wyniki kompilacji Go." = "Go build results.";
 "Wyniki kompilacji i indeksy. Xcode odbuduje je przy następnym buildzie." = "Build results and indexes. Xcode will rebuild them on the next build.";
@@ -1010,6 +1034,7 @@
 "Za chwilę powiem, jak się czuje Twój Mac." = "In a moment I'll tell you how your Mac is doing.";
 "Za chwilę system poprosi o hasło administratora, żeby wykonać jednorazowy odczyt." = "The system will now ask for an administrator password to take a one-time reading.";
 "Za dużo elementów w %@" = "Too many items in %@";
+"Za dużo zaznaczonych elementów" = "Too many selected items";
 "Za mało danych, żeby ocenić stan (pokrycie %lld%%)." = "Not enough data to assess the state (coverage %lld%%).";
 "Za mało pamięci: %@" = "Not enough memory: %@";
 "Zacznij od nowa" = "Start over";
@@ -1055,12 +1080,14 @@
 "Zaznaczone pozostałości trafią do Kosza – przywrócisz je w Finderze" = "Selected leftovers will go to the Trash – you can restore them in Finder";
 "Zaznaczone pozostałości w ~/Library" = "Selected leftovers in ~/Library";
 "Zaznaczone pozycje trafią do Kosza – miejsce wróci po jego opróżnieniu w Finderze." = "The selected items will go to the Trash – space comes back after you empty it in Finder.";
+"Zaznaczono %lld elementów – jednorazowo można przenieść najwyżej %lld. Zaznacz folder zamiast pojedynczych plików albo podziel operację." = "%lld items are selected – at most %lld can be moved at once. Select a folder instead of individual files or split the operation.";
 "Zaznaczono %lld · odzyskasz ok. %@" = "%lld selected · you will reclaim about %@";
 "Zaznaczono: %lld · %@" = "Selected: %lld · %@";
 "Załączniki Poczty (lokalne)" = "Mail attachments (local)";
 "Zbieram dane" = "Collecting data";
 "Zbieram pierwsze pomiary…" = "Collecting the first measurements…";
 "Zbieram pomiary i analizuję…" = "Collecting measurements and analyzing…";
+"Zbieram pomiary wydajności…" = "Collecting performance measurements…";
 "Zbieram pomiary…" = "Collecting measurements…";
 "Zezwól także na pliki w chmurze (usunie je też z chmury) – osobny przełącznik użytkownika" = "Also allow cloud files (also removes them from the cloud) – a separate user switch";
 "Zmiana rozmiaru od pomiaru z %@" = "Size change since the measurement of %@";
@@ -1076,6 +1103,7 @@
 "Zniknęło od %@: %@ · %@" = "Gone since %@: %@ · %@";
 "Zobacz, co obciąża procesor, pamięć i baterię – i czy powodem jest aplikacja, czy system." = "See what loads the CPU, memory and battery – and whether an app or the system is the cause.";
 "Zostało %@. Porządki w MacCare pokażą, co można bezpiecznie przenieść do Kosza." = "%@ left. Cleanup in MacCare shows what can safely be moved to the Trash.";
+"Zrzuty stron na dysk" = "Page-outs to disk";
 "Zwolnienie CPU/pamięci" = "Freeing CPU/memory";
 "Zwolnienie miejsca na dysku" = "Freeing disk space";
 "Zwolnienie miejsca po odinstalowanych aplikacjach" = "Freeing space after uninstalled apps";
@@ -1096,6 +1124,7 @@
 "błąd" = "error";
 "chroniona lokalizacja" = "protected location";
 "chroniony obszar" = "protected area";
+"cykle: —" = "cycles: —";
 "czeka na zgodę" = "awaiting approval";
 "dane aplikacji" = "app data";
 "do 14B parametrów (np. qwen2.5:14b)" = "up to 14B parameters (e.g. qwen2.5:14b)";
@@ -1127,6 +1156,7 @@
 "model działa w chmurze – MacCare używa wyłącznie modeli lokalnych" = "the model runs in the cloud – MacCare uses local models only";
 "na baterii" = "on battery";
 "nie można otworzyć bazy %@" = "cannot open database %@";
+"nie udało się odczytać" = "could not be read";
 "nie wiadomo" = "unknown";
 "nieodwracalne" = "irreversible";
 "niezaznaczone" = "not selected";
@@ -1182,12 +1212,14 @@
 "włączone" = "on";
 "z %@ zajętych – resztę trzymają migawki lub klony" = "of %@ allocated – the rest is held by snapshots or clones";
 "z %@ · skompresowane %@" = "of %@ · compressed %@";
+"z reguły" = "from a rule";
 "za mało danych" = "not enough data";
 "zabronione" = "forbidden";
 "zajęte %@" = "%@ used";
 "zajęte na dysku" = "used on disk";
 "zakres: %@" = "scope: %@";
-"zaproponował %@" = "proposed by %@";
+"zaplanowane" = "scheduled";
+"zaproponował asystent AI" = "proposed by the AI assistant";
 "zasilacz" = "power adapter";
 "zatwierdzono" = "approved";
 "zaznaczone" = "selected";

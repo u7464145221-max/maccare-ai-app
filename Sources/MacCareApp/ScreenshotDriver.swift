@@ -18,6 +18,12 @@ enum ScreenshotDriver {
     /// Uruchomienie do zrzutów ekranu (`--screenshots`) – wtedy aplikacja nie łączy się z siecią (np. sprawdzanie aktualizacji).
     static var isRequested: Bool { CommandLine.arguments.contains("--screenshots") }
 
+    /// Audyt 2 (pkt 2.1): HOME porównywany po kanonizacji (jak `isRealHome` w AppModel) – „$HOME/” lub dowiązanie to wciąż prawdziwy HOME.
+    /// Tryby mutujące wymagają dodatkowo Kosza zastępczego (nigdy prawdziwego Kosza).
+    static func isSyntheticHome(_ model: AppModel) -> Bool {
+        PathTools.canonical(model.home) != PathTools.canonical(NSHomeDirectory()) && model.usesSubstituteTrash
+    }
+
     static func runIfRequested(model: AppModel) async {
         let args = CommandLine.arguments
         guard let i = args.firstIndex(of: "--screenshots"), i + 1 < args.count else { return }
@@ -242,7 +248,7 @@ enum ScreenshotDriver {
     // MARK: Scenariusz 2: dane testowe (syntetyczny HOME), tylko podgląd – kwarantannę zasiewa skrypt, bo w trybie tylko do odczytu
     // aplikacja nie przenosi niczego do kwarantanny (ani nie zatwierdza operacji).
     private static func historyScenario(model: AppModel, dir: URL) async {
-        guard model.home != NSHomeDirectory() else { log("ODMOWA: tryb history działa tylko na syntetycznym HOME"); return }
+        guard isSyntheticHome(model) else { log("ODMOWA: tryb history działa tylko na syntetycznym HOME"); return }
         model.module = .cleanup
         await model.scanCleanup()
         await model.proposeCleanup()                                   // w trybie tylko do odczytu: sam podgląd
@@ -349,7 +355,7 @@ enum ScreenshotDriver {
     /// Nowe widoki z 14.10.2026: skrót do „Moje pliki” po włączeniu Edycji w Prostym, Ochrona (ustalenie o aktualizacjach), skan niepełny, Duplikaty, Asystent.
     /// Tylko syntetyczny HOME; folder bez dostępu tworzony w nim i odblokowywany na końcu.
     private static func w7Scenario(model: AppModel, dir: URL) async {
-        guard model.home != NSHomeDirectory() else { log("ODMOWA: tryb w7 działa tylko na syntetycznym HOME"); return }
+        guard isSyntheticHome(model) else { log("ODMOWA: tryb w7 działa tylko na syntetycznym HOME"); return }
         let prefix = argValue("--prefix") ?? "w7"
         let (w, h) = (argValue("--sizes") ?? "1280x800").split(separator: ",").first.map { s -> (Int, Int) in
             let p = s.split(separator: "x").compactMap { Int($0) }; return p.count == 2 ? (p[0], p[1]) : (1280, 800) } ?? (1280, 800)
@@ -441,7 +447,7 @@ enum ScreenshotDriver {
     /// W8 (F20–F22): pozostałości do Kosza (zaznaczenie, potwierdzenie, wynik), Historia → Pomiary, wybór danych przy odinstalowaniu, karta Powiadomień.
     /// Tylko syntetyczny HOME i atrapa Kosza (`MACCARE_TRASH_DIR`).
     private static func w8Scenario(model: AppModel, dir: URL) async {
-        guard model.home != NSHomeDirectory(), ProcessInfo.processInfo.environment["MACCARE_TRASH_DIR"] != nil else { log("ODMOWA: tryb w8 działa tylko na syntetycznym HOME z MACCARE_TRASH_DIR"); return }
+        guard isSyntheticHome(model), ProcessInfo.processInfo.environment["MACCARE_TRASH_DIR"] != nil else { log("ODMOWA: tryb w8 działa tylko na syntetycznym HOME z MACCARE_TRASH_DIR"); return }
         let prefix = argValue("--prefix") ?? "w8"
         guard let actual = await setWindowSize(1280, 800) else { log("W8: brak okna"); return }
         let size = "\(actual.width)x\(actual.height)"
@@ -490,7 +496,7 @@ enum ScreenshotDriver {
     }
 
     private static func w5Scenario(model: AppModel, dir: URL) async {
-        guard model.home != NSHomeDirectory(), ProcessInfo.processInfo.environment["MACCARE_TRASH_DIR"] != nil else { log("ODMOWA: tryb w5 działa tylko na syntetycznym HOME z MACCARE_TRASH_DIR"); return }
+        guard isSyntheticHome(model), ProcessInfo.processInfo.environment["MACCARE_TRASH_DIR"] != nil else { log("ODMOWA: tryb w5 działa tylko na syntetycznym HOME z MACCARE_TRASH_DIR"); return }
         let prefix = argValue("--prefix") ?? "w5"
         guard let actual = await setWindowSize(1280, 800) else { log("W5: brak okna"); return }
         let size = "\(actual.width)x\(actual.height)"
@@ -546,7 +552,7 @@ enum ScreenshotDriver {
     /// powrót po bezczynności (limit skrócony do 1 s tylko na potrzeby zrzutu). Tylko odczyt: w zakresie `.trashSelectedOnly` nie istnieje żadna operacja do wykonania.
     private static func w4Scenario(model: AppModel, dir: URL) async {
         // audyt 16.10 (P3): scenariusz włącza Edycję i tworzy oczekującą operację – wyłącznie na syntetycznym HOME (jak w5/w7/w8)
-        guard model.home != NSHomeDirectory() else { log("ODMOWA: tryb w4 działa tylko na syntetycznym HOME"); return }
+        guard isSyntheticHome(model) else { log("ODMOWA: tryb w4 działa tylko na syntetycznym HOME"); return }
         let prefix = argValue("--prefix") ?? "w4"
         let (w, h) = (argValue("--sizes") ?? "1280x800").split(separator: ",").first.map { s -> (Int, Int) in
             let p = s.split(separator: "x").compactMap { Int($0) }; return p.count == 2 ? (p[0], p[1]) : (1280, 800) } ?? (1280, 800)

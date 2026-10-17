@@ -22,13 +22,19 @@ struct ProtectionView: View {
 
     private var snap: SystemSnapshot? { model.snapshot }
     private var items: [StartupItem] { (snap?.startupItems ?? []).filter { !$0.isApple } }
+    // Audyt 2 (3.4): brak danych ≠ „0”/„brak” – rozróżnienie w kartach, listach i nagłówku.
+    private var startupKnown: Bool { snap?.startupItems != nil }
+    private var portsKnown: Bool { snap?.security?.portsRead == true }
+    private var crashesKnown: Bool { snap?.crashes != nil }
+    private var somethingUnknown: Bool { !startupKnown || !portsKnown || !crashesKnown }
+    static let unknownValue = "—"
     private var issueCount: Int { model.issueCount(model.protectionFindings) }
     private var simple: Bool { model.viewMode == .simple }
 
     private var result: some View {
         ScrollView {
             VStack(spacing: 18) {
-                ResultHeader(module: .protection, title: issueCount == 0 ? String(localized: "Nic niepokojącego nie znaleziono") : Plural.counted(issueCount, one: "sprawa do sprawdzenia", few: "sprawy do sprawdzenia", many: "spraw do sprawdzenia"),
+                ResultHeader(module: .protection, title: issueCount == 0 ? (somethingUnknown ? String(localized: "Nic niepokojącego w odczytanych danych – części nie udało się odczytać") : String(localized: "Nic niepokojącego nie znaleziono")) : Plural.counted(issueCount, one: "sprawa do sprawdzenia", few: "sprawy do sprawdzenia", many: "spraw do sprawdzenia"),
                              subtitle: simple ? String(localized: "Sprawdziliśmy najważniejsze zabezpieczenia Twojego Maca. MacCare niczego nie zmienia.")
                                               : String(localized: "Pokazujemy fakty i dowody. MacCare niczego nie wyłącza ani nie usuwa.")) { model.restart(.protection) }
                 if !simple { SegmentedSwitch(selection: $tab, options: Tab.allCases, title: { $0.title }, module: .protection, width: 460, accessibilityName: String(localized: "Sekcja ochrony")) }
@@ -70,11 +76,11 @@ struct ProtectionView: View {
                 }.font(Theme.Typo.body)
             }
             if !simple { HStack(alignment: .top, spacing: 16) {
-                summaryCard("power", String(localized: "Autostart"), "\(items.count)", Plural.form(items.count, one: "element spoza Apple", few: "elementy spoza Apple", many: "elementów spoza Apple"),
+                summaryCard("power", String(localized: "Autostart"), startupKnown ? "\(items.count)" : Self.unknownValue, Plural.form(items.count, one: "element spoza Apple", few: "elementy spoza Apple", many: "elementów spoza Apple"),
                             String(localized: "osierocone: \(items.filter { $0.programMissing }.count) · lokalne narzędzia bez podpisu: \(items.filter { $0.hasUntrustedSignature && !$0.programMissing && $0.isFromLocalTools(home: model.home) }.count)")) { tab = .startup }
-                summaryCard("network", String(localized: "Otwarte porty"), "\(snap?.security?.listeningExternalPorts.count ?? 0)", String(localized: "usług nasłuchuje z sieci"),
+                summaryCard("network", String(localized: "Otwarte porty"), portsKnown ? "\(snap?.security?.listeningExternalPorts.count ?? 0)" : Self.unknownValue, portsKnown ? String(localized: "usług nasłuchuje z sieci") : String(localized: "nie udało się odczytać"),
                             String(localized: "dolna granica – bez uprawnień widać tylko procesy użytkownika")) { tab = .ports }
-                summaryCard("exclamationmark.bubble", String(localized: "Awarie (14 dni)"), "\(snap?.crashes?.reduce(0) { $0 + $1.count } ?? 0)", String(localized: "zgłoszeń"),
+                summaryCard("exclamationmark.bubble", String(localized: "Awarie (14 dni)"), crashesKnown ? "\(snap?.crashes?.reduce(0) { $0 + $1.count } ?? 0)" : Self.unknownValue, crashesKnown ? String(localized: "zgłoszeń") : String(localized: "nie udało się odczytać"),
                             String(localized: "\(snap?.crashes?.count ?? 0) różnych programów")) { tab = .crashes }
             } }
             findingsList
@@ -120,7 +126,7 @@ struct ProtectionView: View {
     private var startup: some View {
         SurfaceCard(padding: 0, radius: 24) {
             VStack(spacing: 0) {
-                if items.isEmpty { Text("Brak elementów autostartu spoza Apple.").padding(20).foregroundStyle(Theme.Palette.textSecondary) }
+                if items.isEmpty { Text(startupKnown ? String(localized: "Brak elementów autostartu spoza Apple.") : String(localized: "Listy autostartu jeszcze nie odczytano albo odczyt się nie udał.")).padding(20).foregroundStyle(Theme.Palette.textSecondary) }
                 ForEach(items.sorted { ($0.programMissing ? 0 : 1, $0.label) < ($1.programMissing ? 0 : 1, $1.label) }) { i in
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: i.programMissing ? "questionmark.folder" : "power").foregroundStyle(i.programMissing ? Theme.Palette.warning : AppModule.protection.foreground).frame(width: 24)
@@ -155,7 +161,7 @@ struct ProtectionView: View {
                 Text("Nasłuchujące porty dostępne z sieci").font(Theme.Typo.title).foregroundStyle(Theme.Palette.text)
                 Text("Dolna granica: bez uprawnień administratora widać wyłącznie procesy bieżącego użytkownika. Połączenia lokalne (127.0.0.1) pomijamy.").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary)
                 let p = snap?.security?.listeningExternalPorts ?? []
-                if p.isEmpty { Label("Brak usług użytkownika dostępnych z sieci.", systemImage: "checkmark.seal").foregroundStyle(Theme.Palette.textSecondary) }
+                if p.isEmpty { if portsKnown { Label("Brak usług użytkownika dostępnych z sieci.", systemImage: "checkmark.seal").foregroundStyle(Theme.Palette.textSecondary) } else { Label("Nie udało się odczytać listy portów – to nie znaczy, że żaden nie jest otwarty.", systemImage: "questionmark.circle").foregroundStyle(Theme.Palette.warning) } }
                 ForEach(p, id: \.self) { Text($0).font(Theme.Typo.mono).foregroundStyle(Theme.Palette.text).textSelection(.enabled) }
             }
         }
@@ -167,7 +173,7 @@ struct ProtectionView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Raporty awarii z ostatnich 14 dni").font(Theme.Typo.title).foregroundStyle(Theme.Palette.text)
                 let c = snap?.crashes ?? []
-                if c.isEmpty { Label("Brak raportów.", systemImage: "checkmark.seal").foregroundStyle(Theme.Palette.textSecondary) }
+                if c.isEmpty { if crashesKnown { Label("Brak raportów.", systemImage: "checkmark.seal").foregroundStyle(Theme.Palette.textSecondary) } else { Label("Nie udało się odczytać raportów awarii – to nie znaczy, że ich nie ma.", systemImage: "questionmark.circle").foregroundStyle(Theme.Palette.warning) } }
                 ForEach(c, id: \.process) { g in
                     HStack {
                         Image(systemName: "exclamationmark.bubble").foregroundStyle(Theme.Palette.warning)

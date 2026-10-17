@@ -9,7 +9,13 @@ struct MacCareApp: App {
 
     init() {
         // Zmienne środowiskowe pozwalają uruchomić aplikację na danych testowych (zrzuty ekranu, testy ręczne).
+        // Audyt 2: zmienne MACCARE_* (dane testowe) działają WYŁĄCZNIE w buildzie debug i do zrzutów – w wydaniu aplikacja zawsze używa prawdziwego
+        // katalogu domowego i systemowego Kosza (nikt nie podmieni Kosza przez `launchctl setenv`).
+        #if DEBUG || MACCARE_SCREENSHOTS
         let env = ProcessInfo.processInfo.environment
+        #else
+        let env: [String: String] = [:]
+        #endif
         let dir = env["MACCARE_DATA_DIR"].map { URL(fileURLWithPath: $0) }
         let home = env["MACCARE_HOME"] ?? NSHomeDirectory()
         // Kosz zastępczy (zrzuty ekranu/demonstracja) działa WYŁĄCZNIE na syntetycznym HOME – bez `MACCARE_HOME` zmienna `MACCARE_TRASH_DIR` jest ignorowana.

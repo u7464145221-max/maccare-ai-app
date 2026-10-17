@@ -24,7 +24,7 @@ struct PerformanceView: View {
         let n = model.issueCount(model.performanceFindings)
         return ScrollView {
             VStack(spacing: 18) {
-                ResultHeader(module: .performance, title: n == 0 ? String(localized: "Wydajność wygląda dobrze") : String(localized: "\(Plural.counted(n, one: "zadanie", few: "zadania", many: "zadań")) do rozważenia"),
+                ResultHeader(module: .performance, title: n == 0 ? (model.snapshot?.cpu == nil || model.snapshot?.memory == nil ? String(localized: "Zbieram pomiary wydajności…") : String(localized: "Wydajność wygląda dobrze")) : String(localized: "\(Plural.counted(n, one: "zadanie", few: "zadania", many: "zadań")) do rozważenia"),
                              subtitle: simple ? String(localized: "Oto, co najbardziej obciąża Twojego Maca.")
                                               : model.assessment?.overall.map { String(localized: "Ocena stanu: \($0)/100 – z jawną metodologią i dowodami.") }) { model.restart(.performance) }
                 HStack(alignment: .top, spacing: 16) {
@@ -103,8 +103,10 @@ struct PerformanceView: View {
                         Pill(text: String(localized: "kondycja baterii: ") + (h.map { $0 >= 80 ? String(localized: "dobra") : ($0 >= 60 ? String(localized: "średnia") : String(localized: "słaba")) } ?? String(localized: "nie wiadomo")),
                              color: h.map { $0 >= 80 ? Theme.Palette.ok : ($0 >= 60 ? Theme.Palette.warning : Theme.Palette.critical) } ?? Theme.Palette.textSecondary)
                     } else {
-                        HStack { Pill(text: String(localized: "kondycja \(b.healthPercent.map { "\(Int($0))%" } ?? "—")"), color: Theme.Palette.ok)
-                            Pill(text: String(localized: "\(b.cycleCount ?? 0) cykli"), color: Theme.Palette.textSecondary)
+                        // audyt 2 (3.5): kolor wg kondycji (jak w trybie Prostym), brak licznika cykli = „—”, nie „0 cykli”
+                        HStack { Pill(text: String(localized: "kondycja \(b.healthPercent.map { "\(Int($0))%" } ?? "—")"),
+                                      color: b.healthPercent.map { $0 >= 80 ? Theme.Palette.ok : ($0 >= 60 ? Theme.Palette.warning : Theme.Palette.critical) } ?? Theme.Palette.textSecondary)
+                            Pill(text: b.cycleCount.map { String(localized: "\($0) cykli") } ?? String(localized: "cykle: —"), color: Theme.Palette.textSecondary)
                             if let t = b.temperatureC { Pill(text: String(format: "%.0f °C", t), color: Theme.Palette.textSecondary) } }
                         if let c = b.condition { Text("Stan wg systemu: \(c)").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary) }
                         FlowRow { EvidenceChip(id: "bat.health"); EvidenceChip(id: "bat.condition") }

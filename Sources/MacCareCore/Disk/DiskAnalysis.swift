@@ -126,33 +126,59 @@ public final class DirectoryNode: @unchecked Sendable, Identifiable {
     init(path: String, isDirectory: Bool) { self.path = path; self.name = (path as NSString).lastPathComponent; self.isDirectory = isDirectory }
 }
 
+/// Duże pliki z informacją, czy przejście było pełne (audyt 2, 3.3).
+public struct LargeFilesResult: Sendable {
+    public var files: [FileEntry]
+    public var completeness: DiskAnalyzer.Completeness
+    public init(files: [FileEntry], completeness: DiskAnalyzer.Completeness) { self.files = files; self.completeness = completeness }
+}
+
 public enum DiskAnalyzer {
     /// Przechodzi drzewo bez podążania za symlinkami, licząc każdy inode raz (twarde dowiązania).
-    public static func enumerate(root: String, skip: Set<String> = [], deadline: Date? = nil,
-                                 isCancelled: @Sendable () -> Bool = { false }, visit: (FileEntry) -> Void) {
-        guard let e = FileManager.default.enumerator(atPath: root) else { return }
+    /// Audyt 2 (3.3): czy przejście było pełne – przerwane limitem czasu/anulowaniem albo z katalogami bez dostępu = wynik NIEPEŁNY.
+    public struct Completeness: Sendable, Equatable {
+        public var timedOut = false
+        public var unreadableDirectories = 0
+        public var isComplete: Bool { !timedOut && unreadableDirectories == 0 }
+        public init(timedOut: Bool = false, unreadableDirectories: Int = 0) { self.timedOut = timedOut; self.unreadableDirectories = unreadableDirectories }
+    }
+
+    @discardableResult
+    /// `minSize`: pliki mniejsze odpadają PRZED rozpoznaniem rodzaju i utworzeniem wpisu (audyt 2, 4.4 – duże pliki, duplikaty, zdjęcia).
+    public static func enumerate(root: String, skip: Set<String> = [], deadline: Date? = nil, minSize: UInt64 = 0,
+                                 isCancelled: @Sendable () -> Bool = { false }, visit: (FileEntry) -> Void) -> Completeness {
+        var c = Completeness()
+        guard let e = FileManager.default.enumerator(atPath: root) else { c.unreadableDirectories = 1; return c }
         var seen = Set<FileID>()
         forEachEntry(of: e) { rel in
-            if isCancelled() { return false }
-            if let d = deadline, Date() > d { return false }
+            if isCancelled() { c.timedOut = true; return false }
+            if let d = deadline, Date() > d { c.timedOut = true; return false }
             let p = root + "/" + rel
             guard let st = FileStat.of(p) else { return true }
             if st.isSymlink { return true }
             if st.isDirectory {
                 if skip.contains(p) || p.hasSuffix(".photoslibrary") { e.skipDescendants() }
+                else if access(p, R_OK | X_OK) != 0 { c.unreadableDirectories += 1 }        // enumerator pomija go po cichu – liczymy
                 return true
             }
-            guard st.isRegular, seen.insert(st.fileID).inserted else { return true }
+            guard st.isRegular, st.allocatedSize >= minSize else { return true }
+            guard st.linkCount <= 1 || seen.insert(st.fileID).inserted else { return true }       // `seen` tylko dla dowiązań twardych (jak mapa)
             visit(FileEntry(path: p, size: st.allocatedSize, modified: st.modified, accessed: st.accessed, kind: .of(p)))
             return true
         }
+        return c
     }
 
     public static func largeFiles(root: String, filter: FileFilter, limit: Int = 100, skip: Set<String> = [],
                                   now: Date = Date(), deadline: Date? = nil) -> [FileEntry] {
+        largeFilesScan(root: root, filter: filter, limit: limit, skip: skip, now: now, deadline: deadline).files
+    }
+
+    public static func largeFilesScan(root: String, filter: FileFilter, limit: Int = 100, skip: Set<String> = [],
+                                      now: Date = Date(), deadline: Date? = nil) -> LargeFilesResult {
         var out: [FileEntry] = []
-        enumerate(root: root, skip: skip, deadline: deadline) { if filter.matches($0, now: now) { out.append($0) } }
-        return Array(out.sorted { $0.size > $1.size }.prefix(limit))
+        let c = enumerate(root: root, skip: skip, deadline: deadline, minSize: filter.minSize) { if filter.matches($0, now: now) { out.append($0) } }
+        return LargeFilesResult(files: Array(out.sorted { $0.size > $1.size }.prefix(limit)), completeness: c)
     }
 
     /// Buduje drzewo do zadanej głębokości (głębsze poziomy agregowane do rodzica).
@@ -251,12 +277,12 @@ public enum DuplicateFinder {
         let deadline = Date().addingTimeInterval(timeLimit)
         var files: [FileEntry] = []
         var complete = true
-        DiskAnalyzer.enumerate(root: root, deadline: deadline, isCancelled: isCancelled) { f in
+        let walk = DiskAnalyzer.enumerate(root: root, deadline: deadline, minSize: minSize, isCancelled: isCancelled) { f in
             // Kosz pomijamy: proponowanie przeniesienia do Kosza czegoś, co już w nim jest, nie ma sensu
             guard f.size >= minSize, !skippedKinds.contains(f.kind), !f.path.contains("/.Trash/") else { return }
             if files.count < maxFiles { files.append(f) } else { complete = false }
         }
-        if Date() > deadline || isCancelled() { complete = false }
+        if Date() > deadline || isCancelled() || !walk.isComplete { complete = false }     // audyt 2: foldery bez dostępu = wynik niepełny
         let hashDeadline = deadline.addingTimeInterval(timeLimit)                  // porównanie treści ma osobny limit tej samej długości
         let groups = find(files: files, minSize: minSize, clones: clones, isCancelled: { isCancelled() || Date() > hashDeadline })
         if Date() > hashDeadline { complete = false }

@@ -47,14 +47,15 @@ struct SimpleHome: View {
 
     var body: some View {
         let status = SimplePresentation.status(assessment: model.assessment, findings: model.findings)
-        let all = model.findings.filter { $0.certainty != .aiHypothesis }.count
+        let all = model.simpleRecommendations(model.findings, limit: 10_000).count          // audyt 2 (3.8): te same scalone karty, które widać wyżej
         VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: 20) {
                     hero(status)
                     RecommendationList(findings: model.findings, limit: 3, emptyText: String(localized: "Nic nie wymaga uwagi."))
                     if all > 3 {
-                        Text("\(all - 3 == 1 ? "Jest jeszcze 1 mniej ważna sprawa" : "Jest jeszcze \(Plural.counted(all - 3, one: "mniej ważna sprawa", few: "mniej ważne sprawy", many: "mniej ważnych spraw"))"). Zobaczysz \(all - 3 == 1 ? "ją" : "je") po skanie albo w trybie Profesjonalnym.")
+                        Text(all - 3 == 1 ? String(localized: "Jest jeszcze 1 mniej ważna sprawa. Zobaczysz ją po skanie albo w trybie Profesjonalnym.")
+                                          : String(localized: "Jest jeszcze \(Plural.counted(all - 3, one: "mniej ważna sprawa", few: "mniej ważne sprawy", many: "mniej ważnych spraw")). Zobaczysz je po skanie albo w trybie Profesjonalnym."))
                             .font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary)
                     }
                 }
@@ -300,10 +301,7 @@ struct SettingsView: View {
                 AssistantModelSettings(store: model.assistant)
                 MenuBarSettings()
                 UpdateSettings(updates: model.updates)
-                NotificationSettings(notifier: model.notifier)
-                SurfaceCard(padding: 20, radius: 20) {
-                    Text("Powiadomienia i progi ostrzeżeń pojawią się w kolejnej wersji.").font(Theme.Typo.body).foregroundStyle(Theme.Palette.textSecondary)
-                }
+                NotificationSettings(notifier: model.notifier)                                  // audyt 2 (3.13): usunięta nieaktualna karta „powiadomienia w kolejnej wersji”
             }
             .frame(maxWidth: 720, alignment: .leading).padding(36).frame(maxWidth: .infinity)
         }

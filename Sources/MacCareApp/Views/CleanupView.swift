@@ -48,7 +48,8 @@ struct CleanupView: View {
                 if simple && model.hiddenByModeCount > 0 {
                     HStack(spacing: 8) {
                         Image(systemName: "eye.slash").foregroundStyle(Theme.Palette.textSecondary)
-                        Text("\(Plural.counted(model.hiddenByModeCount, one: "pozycja wymaga", few: "pozycje wymagają", many: "pozycji wymaga")) oceny eksperckiej i \(model.hiddenByModeCount == 1 ? "jest ukryta" : "są ukryte") w trybie Prostym.").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary)
+                        Text(model.hiddenByModeCount == 1 ? String(localized: "1 pozycja wymaga oceny eksperckiej i jest ukryta w trybie Prostym.")
+                                                         : String(localized: "\(Plural.counted(model.hiddenByModeCount, one: "pozycja wymaga", few: "pozycje wymagają", many: "pozycji wymaga")) oceny eksperckiej i są ukryte w trybie Prostym.")).font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary)
                         Button("Przejdź do trybu Profesjonalnego") { model.setViewMode(.pro) }.buttonStyle(.link).foregroundStyle(Theme.Palette.info).actionTarget()
                     }
                 }
@@ -97,7 +98,9 @@ struct CleanupView: View {
         var detail = model.viewMode == .simple ? Plural.elements(items.count) : String(localized: "\(Plural.elements(items.count)) · bezpiecznych: \(safe.count)")
         if model.viewMode == .pro, al > rec * 2, al > 100_000_000 { let snaps = snapshots > 0 ? String(localized: ", migawek: \(snapshots)") : ""; detail += String(localized: " · zajęte \(ByteFormat.string(al)) (resztę trzymają migawki lub klony\(snaps))") }
         return BentoCard(symbol: cat.symbol, module: .cleanup, big: ByteFormat.string(rec), title: cat.label, detail: detail, large: large,
-                         primaryTitle: model.cleanupPreviewOnly ? String(localized: "Podgląd") : String(localized: "Wyczyść"), primaryHelp: model.cleanupPreviewOnly ? model.previewHint : "",
+                         // audyt 2 (3.11): opróżnianie Kosza jest poza zakresem Edycji – karta Kosza zawsze „Podgląd” z wyjaśnieniem
+                         primaryTitle: (model.cleanupPreviewOnly || cat == .trash) ? String(localized: "Podgląd") : String(localized: "Wyczyść"),
+                         primaryHelp: cat == .trash ? String(localized: "Opróżnianie Kosza MacCare tylko pokazuje – opróżnisz go w Finderze (Kosz → Opróżnij).") : (model.cleanupPreviewOnly ? model.previewHint : ""),
                          primaryDisabled: safe.isEmpty && cat != .trash) {
             openDetail(cat)
         } onPrimary: {

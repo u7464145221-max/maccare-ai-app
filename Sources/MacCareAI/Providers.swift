@@ -40,6 +40,17 @@ public struct OllamaProvider: LLMProvider {
 
     /// Audyt 16.10 (2.3): Ollama potrafi udostępniać pod lokalnym adresem modele działające w chmurze (`…-cloud`, pola `remote_host`/`remote_model`) –
     /// zapytanie do nich opuszcza Maca. Inwariant „AI tylko lokalnie”: takie modele są pomijane wszędzie i odrzucane przy rozmowie.
+    /// Audyt 2: dowolne pole `remote…` (także innego typu niż tekst) różne od pustego ⇒ model zdalny.
+    static func hasRemoteField(_ m: JSONValue) -> Bool {
+        guard case .object(let o) = m else { return false }
+        return o.contains { k, v in
+            guard k.lowercased().hasPrefix("remote") else { return false }
+            switch v { case .null: return false; case .string(let s): return !s.isEmpty; case .bool(let b): return b; default: return true }
+        }
+    }
+    /// Najmniejszy rozmiar wag uznawany za model lokalny (najmniejsze modele językowe mają setki MB; osadzenia i tak są pomijane).
+    public static let minimumLocalWeightsBytes: UInt64 = 50_000_000
+
     public static func isRemoteModelName(_ name: String) -> Bool {
         let n = name.lowercased()
         return n.hasSuffix("-cloud") || n.hasSuffix(":cloud") || n.contains("-cloud:") || n.contains(":cloud-")
@@ -78,9 +89,10 @@ public struct OllamaProvider: LLMProvider {
     public static func parseModelInfos(_ data: Data) -> [ModelInfo] {
         guard let v = try? JSONValue.parse(String(decoding: data, as: UTF8.self)) else { return [] }   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
         return v["models"]?.arrayValue?.compactMap { m in
-            guard let name = m["name"]?.stringValue, !isRemoteModelName(name),
-                  (m["remote_host"]?.stringValue ?? "").isEmpty, (m["remote_model"]?.stringValue ?? "").isEmpty else { return nil }   // model w chmurze – pomijany
-            return ModelInfo(name: name, sizeBytes: UInt64(max(0, m["size"]?.numberValue ?? 0)))
+            guard let name = m["name"]?.stringValue, !isRemoteModelName(name), !hasRemoteField(m) else { return nil }   // model w chmurze – pomijany
+            let size = UInt64(max(0, m["size"]?.numberValue ?? 0))
+            guard size >= minimumLocalWeightsBytes else { return nil }                        // audyt 2: „model” o rozmiarze kilkuset bajtów to odnośnik, nie wagi na dysku
+            return ModelInfo(name: name, sizeBytes: size)
         } ?? []
     }
 

@@ -68,6 +68,11 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
     public var isInBackground: Bool { background }
 
     /// Wywoływane przy zmianie widoczności okna. Powrót na pierwszy plan budzi pętlę od razu (nowy pomiar zamiast czekania do 30 s).
+    /// Czy pora na wzbogacenie: co `interval` przy widocznym oknie, co najmniej 30 min w tle.
+    static func enrichmentDue(lastEnrich: Date, now: Date, background: Bool, interval: TimeInterval) -> Bool {
+        now.timeIntervalSince(lastEnrich) >= (background ? max(interval, 1800) : interval)
+    }
+
     public func setBackground(_ on: Bool) {
         guard on != background else { return }
         background = on
@@ -85,7 +90,9 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
         var snap = await collector.snapshot(refreshSlow: slow)
         if slow { lastSlow = now }
         // Wzbogacenie (autostart + podpisy, zabezpieczenia, awarie) trwa sekundy – działa w tle i NIE blokuje szybkiej pętli.
-        if enrichTask == nil, latest == nil || now.timeIntervalSince(lastEnrich) >= settings.enrichInterval {
+        // Audyt 2 (4.7): przy ukrytym oknie wzbogacenie (ok. 60 procesów launchctl, polecenia zabezpieczeń, tmutil) co 30 min zamiast co 5 –
+        // powiadomienia i pasek menu nie potrzebują świeższych danych o autostarcie; po pokazaniu okna dane odświeżają się jak dotąd.
+        if enrichTask == nil, latest == nil || Self.enrichmentDue(lastEnrich: lastEnrich, now: now, background: background, interval: settings.enrichInterval) {
             lastEnrich = now
             enrichTask = Task { [weak self] in await self?.runEnrichment() }
         }
@@ -100,15 +107,17 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
 
     private func runEnrichment() async {
         let home = settings.home
-        let s = await StartupCollector(home: home).collect()
-        let sec = await SecurityCollector().collect()
-        let cr = await Task.detached(priority: .utility) { () -> [CrashReportSummary]? in
+        // Audyt 2 (4.3): kolektory są niezależne – razem, nie po kolei (autostart ok. 3,1 s, tmutil ok. 2,7 s, zabezpieczenia 0,5 s ⇒ czeka się na najdłuższy).
+        async let s = StartupCollector(home: home).collect()
+        async let sec = SecurityCollector().collect()
+        async let cr = Task.detached(priority: .utility) { () -> [CrashReportSummary]? in
             let c = CrashReportCollector(directory: home + "/Library/Logs/DiagnosticReports", home: home)
             return c.directoryUnreadable() ? nil : c.summaries()                           // nieczytelny katalog = nieznane, nie „0 awarii”
         }.value
-        let snaps = await LocalSnapshotCollector.collect()
-        let upd = await Task.detached(priority: .utility) { SoftwareUpdateStatus.read() }.value       // P2-10: tylko odczyt plistu, bez sieci
-        startup = s; security = sec; crashes = cr; localSnapshots = snaps; updates = upd
+        async let snaps = LocalSnapshotCollector.collect()
+        async let upd = Task.detached(priority: .utility) { SoftwareUpdateStatus.read() }.value       // P2-10: tylko odczyt plistu, bez sieci
+        let (rs, rsec, rcr, rsnaps, rupd) = await (s, sec, cr, snaps, upd)
+        startup = rs; security = rsec; crashes = rcr; localSnapshots = rsnaps; updates = rupd
         enrichTask = nil
     }
 
@@ -206,11 +215,15 @@ public actor MacDiagnosticsProvider: DiagnosticsProvider {
     }
 
     public func largeFiles(minBytes: UInt64, olderThanDays: Int?, limit: Int) async -> [FileEntry] {
+        await largeFilesScan(minBytes: minBytes, olderThanDays: olderThanDays, limit: limit).files
+    }
+
+    public func largeFilesScan(minBytes: UInt64, olderThanDays: Int?, limit: Int) async -> LargeFilesResult {
         let home = settings.home
         let deadline = Date().addingTimeInterval(settings.largeFilesTimeout)
         let filter = FileFilter(minSize: minBytes, olderThanDays: olderThanDays)
         return await Task.detached(priority: .utility) {
-            DiskAnalyzer.largeFiles(root: home, filter: filter, limit: limit, skip: [home + "/Library"], deadline: deadline)
+            DiskAnalyzer.largeFilesScan(root: home, filter: filter, limit: limit, skip: [home + "/Library"], deadline: deadline)
         }.value
     }
 

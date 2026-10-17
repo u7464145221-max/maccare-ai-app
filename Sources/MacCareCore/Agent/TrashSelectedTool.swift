@@ -37,6 +37,9 @@ public struct FileFingerprint: Equatable, Sendable {
 /// `.userSelected`; element musi nadal być tym samym obiektem co przy zaznaczeniu (odcisk lstat: urządzenie, inode, rozmiar, mtime) – sprawdzane w podglądzie i jeszcze raz tuż
 /// przed każdym przeniesieniem; pliki w chmurze wymagają osobnego przełącznika; częściowa porażka nigdy nie jest „sukcesem”.
 public struct TrashSelectedTool: AgentTool {
+    /// Najwięcej elementów w jednej operacji (audyt 2, 3.10 – jak w Porządkach).
+    public static let maxItems = 500
+
     let trash: TrashService
     let home: String
     let tempDir: String
@@ -72,8 +75,8 @@ public struct TrashSelectedTool: AgentTool {
     public var spec: ToolSpec {
         ToolSpec(name: "trash_selected",
                  description: String(localized: "Przenosi do systemowego Kosza pliki i foldery zaznaczone RĘCZNIE przez użytkownika w „Moje pliki” (nigdy trwałe usunięcie; elementy można przywrócić w Finderze)."),
-                 parameters: [ToolParameter("paths", .stringArray, String(localized: "Ścieżki zaznaczone przez użytkownika"), maxLength: 2048, maxItems: 200),
-                              ToolParameter("fingerprints", .stringArray, String(localized: "Odciski elementów z chwili zaznaczenia (urządzenie:inode:rozmiar:mtime:rodzaj), w kolejności ścieżek"), required: false, maxLength: 160, maxItems: 200),
+                 parameters: [ToolParameter("paths", .stringArray, String(localized: "Ścieżki zaznaczone przez użytkownika"), maxLength: 2048, maxItems: TrashSelectedTool.maxItems),
+                              ToolParameter("fingerprints", .stringArray, String(localized: "Odciski elementów z chwili zaznaczenia (urządzenie:inode:rozmiar:mtime:rodzaj), w kolejności ścieżek"), required: false, maxLength: 160, maxItems: TrashSelectedTool.maxItems),
                               ToolParameter("include_cloud", .boolean, String(localized: "Zezwól także na pliki w chmurze (usunie je też z chmury) – osobny przełącznik użytkownika"), required: false)],
                  kind: .action, risk: .medium,
                  limits: String(localized: "Tylko katalog domowy na wolumenie startowym; nigdy katalogi systemowe, ~/Library poza regułami, pakiety aplikacji, biblioteki Zdjęć/Muzyki, katalog domowy i jego foldery pierwszego poziomu jako całość ani dane MacCare. Zawsze do Kosza (odwracalne)."),

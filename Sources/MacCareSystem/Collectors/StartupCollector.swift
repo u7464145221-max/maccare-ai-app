@@ -44,7 +44,7 @@ public struct StartupCollector: Sendable {
             let files = ((try? FileManager.default.contentsOfDirectory(atPath: d.path)) ?? []).filter { $0.hasSuffix(".plist") }.sorted()   // try? świadomie: nieczytelny katalog ⇒ brak wpisów (tylko odczyt)
             for f in files {
                 let path = d.path + "/" + f
-                guard let data = FileManager.default.contents(atPath: path),
+                guard let data = SafeRead.regularFile(path, maxBytes: 1 << 20),               // audyt 2: bez dowiązań, FIFO i plików > 1 MB
                       let obj = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
                       let item = Self.parse(plist: obj, path: path, scope: d.scope) else { continue }
                 items.append(item)
@@ -53,24 +53,28 @@ public struct StartupCollector: Sendable {
         guard checkSignatures || checkLoaded else { return items }
 
         let uid = self.uid
+        // Audyt 2: najwyżej 8 sprawdzeń naraz (każde to proces `launchctl`/`codesign`) – tysiące plistów nie wyczerpią limitu procesów użytkownika.
         let resolved: [StartupItem] = await withTaskGroup(of: (Int, StartupItem).self) { group in
-            for (i, it) in items.enumerated() {
-                group.addTask {
-                    var item = it
-                    if checkSignatures {
-                        if let prog = item.program, prog.hasPrefix("/") {
-                            let r = await CodeSignatureChecker.check(path: prog)
-                            item.signature = r.status; item.teamID = r.teamID; item.signerName = r.signerName
-                        } // program względny/nieznany ⇒ .notChecked (nie zgadujemy)
-                    }
-                    if checkLoaded, Self.isValidLabel(item.label) {
-                        item.isLoaded = await Self.loadedState(label: item.label, scope: item.scope, uid: uid)
-                    }
-                    return (i, item)
+            func check(_ i: Int, _ it: StartupItem) async -> (Int, StartupItem) {
+                var item = it
+                if checkSignatures {
+                    if let prog = item.program, prog.hasPrefix("/") {
+                        let r = await CodeSignatureChecker.check(path: prog)
+                        item.signature = r.status; item.teamID = r.teamID; item.signerName = r.signerName
+                    } // program względny/nieznany ⇒ .notChecked (nie zgadujemy)
                 }
+                if checkLoaded, Self.isValidLabel(item.label) {
+                    item.isLoaded = await Self.loadedState(label: item.label, scope: item.scope, uid: uid)
+                }
+                return (i, item)
             }
+            var pending = Array(items.enumerated()).makeIterator()
+            for _ in 0..<8 { if let (i, it) = pending.next() { group.addTask { await check(i, it) } } }
             var out = items
-            for await (i, it) in group { out[i] = it }
+            for await (i, it) in group {
+                out[i] = it
+                if let (j, nx) = pending.next() { group.addTask { await check(j, nx) } }
+            }
             return out
         }
         return resolved

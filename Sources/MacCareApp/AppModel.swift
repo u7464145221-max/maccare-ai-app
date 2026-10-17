@@ -263,7 +263,11 @@ final class AppModel: ObservableObject {
     /// - `tempDir`: katalog tymczasowy skanowany przez regułę „pliki tymczasowe”. **Domyślnie wynika z `home`**: dla prawdziwego
     ///   katalogu domowego to systemowy `$TMPDIR`, dla każdego innego (testy, tryb demonstracyjny) – podkatalog tego `home`.
     ///   Dzięki temu model z syntetycznym `home` nigdy nie skanuje (a więc nie ruszy) prawdziwego `$TMPDIR`.
+    /// Kosz zastępczy (katalog) zamiast systemowego – tylko syntetyczny HOME (zrzuty, demonstracje).
+    let usesSubstituteTrash: Bool
+
     init(dataDir: URL? = nil, home: String = NSHomeDirectory(), tempDir: String? = nil, sensorSampler: SensorSampling = PowerMetricsSampler(), monitorEditActivity: Bool = true, trash: TrashService? = nil) {
+        usesSubstituteTrash = trash is DirectoryTrash
         DatalessPolicy.preventMaterialization()                                         // F9: skan nigdy nie pobiera plików z chmury (iCloud/File Provider)
         FileDescriptorLimit.raise()                                                       // audyt 16.10: zapas deskryptorów dla równoległego skanu
         self.home = home
@@ -271,7 +275,8 @@ final class AppModel: ObservableObject {
         self.monitorEditActivity = monitorEditActivity
         executionState = ExecutionGuard.current                      // produkcja: jedyny stan `ExecutionGuard.shared` (zawsze „tylko odczyt” po starcie); testy: wstrzyknięty
         let dir = dataDir ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("MacCare AI", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)   // try? świadomie: brak katalogu ⇒ kolejny zapis sam zgłosi błąd
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])   // try? świadomie: brak katalogu ⇒ kolejny zapis sam zgłosi błąd
+        try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)   // try? świadomie: audyt 2 – dane tylko dla właściciela konta (także istniejący katalog)
         self.dataDir = dir
         let store: HistoryStore
         let dbPath = dir.appendingPathComponent("history.sqlite").path
@@ -438,12 +443,13 @@ final class AppModel: ObservableObject {
     }
 
     func refreshFindings() async {
-        findings = await provider.findings()
+        let fresh = await provider.findings()
+        if fresh != findings { findings = fresh }                                        // audyt 2 (4.12): bez zmian = bez przeliczania widoków
         guard !ScreenshotDriver.isRequested else { return }                              // uruchomienia do zrzutów – bez powiadomień i bez sieci
         await updates.checkIfDue()                                                        // audyt P3: „raz w tygodniu” także, gdy aplikacja działa tygodniami (tanie, gdy nie pora)
         var newVersion: String?
         if case .available(let r) = updates.state { newVersion = r.tag }
-        notifier.evaluate(freeBytes: freeSpace(), findings: findings, newVersion: newVersion)
+        if notifier.enabled { notifier.evaluate(freeBytes: freeSpace(), findings: findings, newVersion: newVersion) }   // audyt 2: odczyt wolumenu tylko, gdy potrzebny
     }
 
     func evidence(_ id: String) -> Evidence? { evidenceByID[id] }
@@ -459,8 +465,11 @@ final class AppModel: ObservableObject {
     }
 
     // MARK: Zestawienia dla modułów i Smart Scan
-    var protectionFindings: [Finding] { findings.filter { [.security, .startup].contains($0.category) } }
-    var performanceFindings: [Finding] { findings.filter { [.cpu, .memory, .thermal, .battery].contains($0.category) } }
+    // Audyt 2 (3.7): ustalenia „stabilność” też mają swój moduł – powtarzające się awarie w Ochronie (zakładka awarii), zombie i czas bez restartu w Wydajności.
+    var protectionFindings: [Finding] { Self.protection(findings) }
+    var performanceFindings: [Finding] { Self.performance(findings) }
+    static func protection(_ f: [Finding]) -> [Finding] { f.filter { [.security, .startup].contains($0.category) || ($0.category == .stability && $0.ruleID == "stability.crashes") } }
+    static func performance(_ f: [Finding]) -> [Finding] { f.filter { [.cpu, .memory, .thermal, .battery].contains($0.category) || ($0.category == .stability && $0.ruleID != "stability.crashes") } }
     var cleanupFindings: [Finding] { findings.filter { [.storage, .cleanup].contains($0.category) } }
 
     /// Werdykt o stanie Maca – JEDNO źródło dla obu trybów (Prosty: „Wszystko OK / Wymaga uwagi / Pilne”, Profesjonalny: poniższe etykiety).
@@ -592,8 +601,11 @@ final class AppModel: ObservableObject {
         switch await executor.handle(call, origin: .user) {
         case .needsApproval(let p):
             pending = p
+            // Audyt 2 (3.12): podgląd operacji przez Kosz bez żadnego elementu (np. odmowa: aplikacja działa) – nie ma czego zatwierdzać.
+            let nothing = Self.measuredTools.contains(p.call.name) && p.preview.affectedItems.isEmpty
             sheet = SheetContent(toolName: p.call.name, preview: p.preview, permissions: p.spec.permissions, separate: p.separateCategories,
-                                 origin: p.origin == .user ? String(localized: "zlecił użytkownik") : String(localized: "zaproponował \(p.origin.rawValue)"), readOnly: false, reason: nil)
+                                 origin: Self.originLabel(p.origin), readOnly: nothing,
+                                 reason: nothing ? (p.preview.warnings.first ?? String(localized: "Nic nie zostanie zmienione.")) : nil)
         case .previewOnly(let pv, let reason):
             let spec = executor.registry.tool(call.name)?.spec
             let op = executor.registry.tool(call.name)?.operation ?? .unclassified
@@ -606,6 +618,16 @@ final class AppModel: ObservableObject {
         case .failed(let m): lastReport = OperationReport(title: Self.reportTitle(call.name), success: false, message: String(localized: "Błąd: \(m)"), tool: call.name)
         }
         reloadHistory()          // każda próba (także odrzucona lub tylko podgląd) zostawia ślad w dzienniku audytu
+    }
+
+    /// Audyt 2 (P3): pochodzenie operacji po polsku/angielsku zamiast surowego `user`/`llm`.
+    static func originLabel(_ o: CallOrigin) -> String {
+        switch o {
+        case .user: return String(localized: "zlecił użytkownik")
+        case .llm: return String(localized: "zaproponował asystent AI")
+        case .schedule: return String(localized: "zaplanowane")
+        case .rule: return String(localized: "z reguły")
+        }
     }
 
     static func reportTitle(_ tool: String) -> String {
@@ -624,6 +646,12 @@ final class AppModel: ObservableObject {
         let paths = diskMap.selectedPaths
         guard !paths.isEmpty else { return }
         filesReportDismissed()
+        guard paths.count <= TrashSelectedTool.maxItems else {                             // audyt 2 (3.10): jasny komunikat zamiast odrzucenia całości
+            lastReport = OperationReport(title: String(localized: "Za dużo zaznaczonych elementów"), success: false,
+                                         message: String(localized: "Zaznaczono \(paths.count) elementów – jednorazowo można przenieść najwyżej \(TrashSelectedTool.maxItems). Zaznacz folder zamiast pojedynczych plików albo podziel operację."),
+                                         tool: "trash_selected")
+            return
+        }
         var args: [String: JSONValue] = ["paths": .array(paths.map { .string($0) }), "fingerprints": .array(diskMap.fingerprints(for: paths).map { .string($0) })]
         if includeCloud { args["include_cloud"] = true }
         await propose(ToolCall(name: "trash_selected", arguments: args))
@@ -654,8 +682,10 @@ final class AppModel: ObservableObject {
         pending = nil
         sheet = nil
         let tool = p.call.name
+        var movedPaths: [String]?                                                         // audyt 2 (4.1): co faktycznie trafiło do Kosza
         switch outcome {
         case .completed(let r):
+            movedPaths = (r.data["moved"]?.arrayValue ?? []).compactMap { $0["path"]?.stringValue }
             try? await Task.sleep(nanoseconds: 1_200_000_000)          // chwila na odświeżenie liczników wolumenu   // try? świadomie: anulowanie zadania przerywa czekanie – oczekiwane
             let delta: Int64? = before.flatMap { b in freeSpace().map { $0 - b } }
             let note = Self.measurementNote(tool: tool)
@@ -683,8 +713,16 @@ final class AppModel: ObservableObject {
         operationRunning = false
         reloadHistory()
         if ["quarantine_cleanup_items", "trash_cleanup_items", "empty_trash", "restore_from_quarantine", "purge_quarantine"].contains(tool) {
-            if tool == "trash_cleanup_items" { selection.removeAll() }
-            await scanCleanup()
+            if tool == "trash_cleanup_items", let moved = movedPaths, var r = scanResult {
+                // Audyt 2 (4.1): bez TRZECIEGO pełnego skanu (ok. 20 s pracy dysku) – przeniesione pozycje (i leżące w nich) znikają z wyniku,
+                // jak w mapie dysku. Podgląd i wykonanie nadal weryfikują świeżym skanem (bezpieczeństwo).
+                r.candidates.removeAll { c in moved.contains { c.path == $0 || PathTools.isWithin(c.path, $0) } }
+                scanResult = r
+                selection.removeAll()
+            } else {
+                if tool == "trash_cleanup_items" { selection.removeAll() }
+                await scanCleanup()
+            }
         }
         if tool == "uninstall_app_to_trash" || tool == "trash_app_leftovers" { await apps.load(force: true) }
     }

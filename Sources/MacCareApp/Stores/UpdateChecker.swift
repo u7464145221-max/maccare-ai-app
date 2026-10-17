@@ -37,9 +37,10 @@ final class UpdateChecker: ObservableObject {
 
     func check() async {
         state = .checking
+        // Audyt 2 (3.2): czas PRÓBY zapisywany przed zapytaniem – bez sieci „raz w tygodniu” nie ponawia zapytania przy każdym odświeżeniu (co ok. 10 s).
+        defaults.set(Date().timeIntervalSince1970, forKey: Self.lastCheckKey)
         do {
             let (data, resp) = try await fetch(Self.request())
-            defaults.set(Date().timeIntervalSince1970, forKey: Self.lastCheckKey)
             guard (resp as? HTTPURLResponse)?.statusCode == 200, let rel = UpdateCheck.parse(data) else {
                 state = .failed(String(localized: "Nie udało się odczytać informacji o wydaniu.")); return
             }

@@ -37,7 +37,7 @@ public struct HealthAssessment: Codable, Sendable {
             else if f < 0.10 { d.append(.init(points: 45, reason: String(localized: "Wolne < 10%"), evidenceID: "disk.free")) }
             else if f < 0.15 { d.append(.init(points: 25, reason: String(localized: "Wolne < 15%"), evidenceID: "disk.free")) }
             else if f < 0.25 { d.append(.init(points: 10, reason: String(localized: "Wolne < 25%"), evidenceID: "disk.free")) }
-            comps.append(component("storage", "Dysk", 0.25, d))
+            comps.append(component("storage", String(localized: "Dysk"), 0.25, d))
         } else { comps.append(Component(id: "storage", title: String(localized: "Dysk"), weight: 0.25, score: nil, deductions: [], note: String(localized: "brak danych"))) }
 
         // Pamięć (0.25): ciśnienie pamięci (wskaźnik systemowy) + swap jako sygnał pomocniczy.
@@ -53,7 +53,7 @@ public struct HealthAssessment: Codable, Sendable {
                 if ratio > 0.5 { d.append(.init(points: 15, reason: String(localized: "Swap > 50% RAM"), evidenceID: "mem.swap")) }
                 else if ratio > 0.25 { d.append(.init(points: 5, reason: String(localized: "Swap > 25% RAM"), evidenceID: "mem.swap")) }
             }
-            comps.append(component("memory", "Pamięć", 0.25, d))
+            comps.append(component("memory", String(localized: "Pamięć"), 0.25, d))
         } else { comps.append(Component(id: "memory", title: String(localized: "Pamięć"), weight: 0.25, score: nil, deductions: [], note: String(localized: "brak danych"))) }
 
         // Procesor i temperatura (0.15): stan termiczny i obciążenie chwilowe (sygnał słaby – mała kara).
@@ -65,7 +65,7 @@ public struct HealthAssessment: Codable, Sendable {
                 else if th == .fair { d.append(.init(points: 5, reason: String(localized: "Podwyższona temperatura"), evidenceID: "thermal.state")) }
             }
             if let c = s.cpu, c.totalPercent > 90 { d.append(.init(points: 10, reason: String(localized: "CPU > 90% w chwili pomiaru"), evidenceID: "cpu.total")) }
-            comps.append(component("cpu", "Procesor i temperatura", 0.15, d))
+            comps.append(component("cpu", String(localized: "Procesor i temperatura"), 0.15, d))
         } else { comps.append(Component(id: "cpu", title: String(localized: "Procesor i temperatura"), weight: 0.15, score: nil, deductions: [], note: String(localized: "brak danych"))) }
 
         // Bezpieczeństwo (0.25): tylko stany ODCZYTANE. Nieznane nie są karane.
@@ -76,7 +76,7 @@ public struct HealthAssessment: Codable, Sendable {
             if p.fileVault == .disabled { d.append(.init(points: 20, reason: String(localized: "FileVault wyłączony"), evidenceID: "sec.filevault")) }
             if p.firewall == .disabled { d.append(.init(points: 5, reason: String(localized: "Zapora wyłączona"), evidenceID: "sec.firewall")) }
             let known = [p.sip, p.gatekeeper, p.fileVault, p.firewall].filter { $0 != .unknown }.count
-            var c = component("security", "Bezpieczeństwo", 0.25, d)
+            var c = component("security", String(localized: "Bezpieczeństwo"), 0.25, d)
             if known == 0 { c.score = nil; c.note = String(localized: "brak danych") } else if known < 4 { c.note = String(localized: "odczytano \(known) z 4 ustawień") }
             comps.append(c)
         } else { comps.append(Component(id: "security", title: String(localized: "Bezpieczeństwo"), weight: 0.25, score: nil, deductions: [], note: String(localized: "brak danych"))) }
@@ -89,7 +89,7 @@ public struct HealthAssessment: Codable, Sendable {
                 else if h < 80 { d.append(.init(points: 25, reason: String(localized: "Kondycja < 80%"), evidenceID: "bat.health")) }
             }
             if let cond = b.condition?.lowercased(), cond.contains("service") { d.append(.init(points: 30, reason: String(localized: "System zaleca serwis"), evidenceID: "bat.condition")) }
-            var c = component("battery", "Bateria", 0.10, d)
+            var c = component("battery", String(localized: "Bateria"), 0.10, d)
             if b.healthPercent == nil && b.condition == nil { c.score = nil; c.note = String(localized: "system nie udostępnia kondycji") }
             comps.append(c)
         }

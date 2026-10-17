@@ -59,12 +59,24 @@ struct SmartScanView: View {
         }
     }
 
+    /// Mała pierwsza litera bez psucia skrótów („SIP wyłączony”, „Swap > 50% RAM” zostają; „Dysk prawie pełny” → „dysk prawie pełny”).
+    static func lowerFirst(_ s: String) -> String {
+        let chars = Array(s)
+        guard chars.count > 1, chars[0].isUppercase, !chars[1].isUppercase else { return s }
+        return String(chars[0]).lowercased() + String(chars.dropFirst())
+    }
+
     private var stateSentence: String {
         guard let a = model.assessment else { return String(localized: "Zbieram pierwsze pomiary…") }
         guard a.overall != nil else { return String(localized: "Za mało danych, żeby ocenić stan (pokrycie \(Int(a.coverage * 100))%).") }
         let deductions = a.components.flatMap { $0.deductions }.sorted { $0.points > $1.points }
-        guard let top = deductions.first else { return String(localized: "Wszystkie sprawdzane obszary wyglądają dobrze.") }
-        return String(localized: "Największy wpływ na ocenę: \(top.reason.lowercased()) (−\(top.points) pkt). Kliknij „i”, by zobaczyć dowody.")
+        guard let top = deductions.first else {
+            // audyt 2 (3.6): ocena bez potrąceń, a są ostrzeżenia (np. czekająca aktualizacja systemu) – nie mówimy „wszystko dobrze”
+            let warnings = model.issueCount(model.findings.filter { $0.severity >= .warning })
+            return warnings == 0 ? String(localized: "Wszystkie sprawdzane obszary wyglądają dobrze.")
+                                 : String(localized: "Ocena bez potrąceń, ale \(Plural.counted(warnings, one: "sprawa wymaga", few: "sprawy wymagają", many: "spraw wymaga")) uwagi – szczegóły poniżej.")
+        }
+        return String(localized: "Największy wpływ na ocenę: \(Self.lowerFirst(top.reason)) (−\(top.points) pkt). Kliknij „i”, by zobaczyć dowody.")
     }
 
     private var recommendations: some View {

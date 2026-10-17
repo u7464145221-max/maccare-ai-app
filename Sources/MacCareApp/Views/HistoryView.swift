@@ -83,7 +83,7 @@ struct HistoryView: View {
     // MARK: Skany
     private var scansList: some View {
         List {
-            if model.scans.isEmpty { EmptyState(symbol: "magnifyingglass", title: String(localized: "Brak skanów"), detail: String(localized: "Uruchom Smart Scan w Panelu lub skan w Czyszczeniu.")) }
+            if model.scans.isEmpty { EmptyState(symbol: "magnifyingglass", title: String(localized: "Brak skanów"), detail: String(localized: "Uruchom Smart Scan albo skan w Porządkach.")) }
             ForEach(model.scans) { s in
                 HStack(spacing: Theme.Space.m) {
                     Image(systemName: s.kind == "smart" ? "wand.and.stars" : "sparkles").foregroundStyle(Theme.Palette.accent).frame(width: 22)
@@ -120,7 +120,7 @@ struct HistoryView: View {
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(o.at.formatted(date: .abbreviated, time: .standard)).font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textSecondary)
-                        Text("\(o.origin.rawValue) · \(o.mode.label)").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textTertiary)
+                        Text("\(AppModel.originLabel(o.origin)) · \(o.mode.label)").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textTertiary)
                     }
                 }
                 .padding(.vertical, 3)
@@ -181,7 +181,7 @@ struct HistoryView: View {
             .padding(.horizontal, Theme.Space.xl).padding(.vertical, Theme.Space.m)
             Divider()
             List {
-                if model.quarantineEntries.isEmpty { EmptyState(symbol: "tray", title: String(localized: "Kwarantanna jest pusta"), detail: String(localized: "Elementy przeniesione przez Czyszczenie pojawią się tutaj i będzie można je przywrócić.")) }
+                if model.quarantineEntries.isEmpty { EmptyState(symbol: "tray", title: String(localized: "Kwarantanna jest pusta"), detail: String(localized: "Porządki przenoszą dziś elementy do systemowego Kosza (przywrócisz je w Finderze) – kwarantanna jest wyłączona.")) }
                 ForEach(model.quarantineEntries) { e in
                     HStack(alignment: .top, spacing: Theme.Space.m) {
                         Toggle("", isOn: Binding(get: { chosen.contains(e.id) }, set: { if $0 { chosen.insert(e.id) } else { chosen.remove(e.id) } }))

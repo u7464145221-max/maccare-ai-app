@@ -39,7 +39,9 @@ public enum ParallelTreeMeasure {
         var claimed = Set<FileID>()
         var pending = 1
         var failed = false
-        init(name: String, root: String) { self.name = name; self.root = root }
+        /// Audyt 2 (4.2): klony APFS – Porządki liczą miejsce do odzyskania (mapa: bez klonów, jak dotąd).
+        let clones: CloneInfoProvider
+        init(name: String, root: String, clones: CloneInfoProvider = NoCloneInfo()) { self.name = name; self.root = root; self.clones = clones }
 
         /// Te same reguły co `DiskUsage.measureTreeBulk` (wpis katalogu dziecka pierwszego poziomu – do sumy korzenia, reszta – do swojego wiadra).
         func apply(_ ev: BulkWalker.Event, registry: HardLinkRegistry, trackKinds: Bool) {
@@ -47,7 +49,7 @@ public enum ParallelTreeMeasure {
             case .file(let dir, let topKey, let f):
                 let key = topKey ?? f.name
                 if topKey == nil { meta[key] = (false, f.modified) }
-                buckets[key, default: DiskUsage()].addEntry(f, dir: dir, clones: NoCloneInfo(), trackKinds: trackKinds, seen: &claimed, sparseSeen: true, shared: registry)
+                buckets[key, default: DiskUsage()].addEntry(f, dir: dir, clones: clones, trackKinds: trackKinds, seen: &claimed, sparseSeen: true, shared: registry)
             case .directory(let path, let topKey, let name, let allocated, let modified):
                 let key = topKey ?? name
                 if path == root + "/" + name {
@@ -124,9 +126,10 @@ public enum ParallelTreeMeasure {
     /// Mierzy katalogi `names` w folderze `dir` (wywołujący wcześniej odsiewa pliki, dowiązania i katalogi bez dostępu). Blokuje do końca;
     /// `onChild` – z wątku puli, dokładnie raz na każde dziecko. `limit` wątków (zwykle `ScanConcurrency.limit()`).
     public static func measureDirectories(in dir: String, names: [String], limit: Int, registry: HardLinkRegistry, trackKinds: Bool = true,
+                                          clones: CloneInfoProvider = NoCloneInfo(),
                                           shouldStop: @escaping @Sendable () -> Bool = { false }, gauge: ParallelGauge? = nil,
                                           onChild: @escaping @Sendable (Outcome) -> Void) {
-        let jobs = names.map { Job(name: $0, root: dir + "/" + $0) }
+        let jobs = names.map { Job(name: $0, root: dir + "/" + $0, clones: clones) }
         let rootFD = open(dir, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
         guard DiskUsage.useBulkWalker, rootFD >= 0 else {
             if rootFD >= 0 { close(rootFD) }
@@ -206,7 +209,7 @@ public enum ParallelTreeMeasure {
 
     static func fallback(_ job: Job, registry: HardLinkRegistry, trackKinds: Bool, shouldStop: @escaping () -> Bool) -> Outcome {
         var seen = Set<FileID>()
-        let t = DiskUsage.measureTreeLegacy(job.root, trackKinds: trackKinds, sparseSeen: true, seen: &seen, shared: registry, shouldStop: shouldStop)
+        let t = DiskUsage.measureTreeLegacy(job.root, clones: job.clones, trackKinds: trackKinds, sparseSeen: true, seen: &seen, shared: registry, shouldStop: shouldStop)
         return Outcome(name: job.name, tree: t, stopped: shouldStop(), usedFallback: true)
     }
 }

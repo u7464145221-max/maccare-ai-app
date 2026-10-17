@@ -149,7 +149,14 @@ public final class ExecutionState: @unchecked Sendable {
     }
 
     /// Aktywność użytkownika (klik, klawisz, przewijanie) odsuwa automatyczny powrót do odczytu.
-    public func noteActivity() { lock.withLock { _lastActivity = now() } }
+    /// Audyt 2 (pkt 2.2): wygaśnięcie sprawdzane PRZED odsunięciem – klik tuż po upływie limitu (np. w zostawionym arkuszu) nie ożywia Edycji.
+    public func noteActivity() {
+        let expired = lock.withLock { () -> Bool in
+            if case .edit = _mode, now().timeIntervalSince(_lastActivity) >= _idleLimit { _mode = .readOnly; return true }
+            _lastActivity = now(); return false
+        }
+        if expired { notify(.readOnly) }
+    }
 
     /// Ile zostało do automatycznego powrotu do odczytu (nil w odczycie).
     public var remainingIdle: TimeInterval? {

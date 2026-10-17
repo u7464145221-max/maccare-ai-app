@@ -56,9 +56,7 @@ public struct CrashReportCollector: Sendable {
             let path = directory + "/" + f
             guard let attrs = try? fm.attributesOfItem(atPath: path), let mtime = attrs[.modificationDate] as? Date else { continue }   // try? świadomie: brak wartości ⇒ nieznane
             var header: Header?
-            if f.hasSuffix(".ips"), let h = FileHandle(forReadingAtPath: path) {
-                defer { try? h.close() }   // try? świadomie: zamknięcie uchwytu tylko do odczytu
-                let chunk = (try? h.read(upToCount: 8192)) ?? Data()   // try? świadomie: nieudany odczyt ⇒ brak danych
+            if f.hasSuffix(".ips"), let chunk = SafeRead.prefix(path, bytes: 8192) {      // audyt 2: FIFO/dowiązanie nie zawiesza kolektora
                 if let nl = chunk.firstIndex(of: 0x0A) { header = Self.parseHeader(firstLine: chunk[..<nl]) }
             }
             let h = header ?? Header(app: Self.processName(fromFile: f), name: nil, bugType: nil, date: nil, version: nil)
@@ -105,8 +103,7 @@ public struct CrashReportCollector: Sendable {
         guard let e = candidates.first else { return nil }
         let path = directory + "/" + e.file
         guard e.file.hasSuffix(".ips"),
-              let size = (try? FileManager.default.attributesOfItem(atPath: path))?[.size] as? Int, size <= Self.maxFileBytes,   // try? świadomie: brak wartości ⇒ nieznane
-              let data = FileManager.default.contents(atPath: path), let nl = data.firstIndex(of: 0x0A),
+              let data = SafeRead.regularFile(path, maxBytes: Self.maxFileBytes), let nl = data.firstIndex(of: 0x0A),   // audyt 2: limit na otwartym pliku, bez dowiązań
               let body = try? JSONSerialization.jsonObject(with: data[data.index(after: nl)...]) as? [String: Any] else {   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
             return Self.truncate(String(localized: "Raport \(e.kind) procesu \(e.header.app) z \(e.date.formatted(date: .abbreviated, time: .shortened)) (bez szczegółów – nieobsługiwany format)."))
         }

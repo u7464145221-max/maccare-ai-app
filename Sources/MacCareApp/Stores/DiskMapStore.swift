@@ -68,6 +68,8 @@ final class DiskMapStore: ObservableObject {
     @Published var highlighted: String?
     /// Zakładka „Duże pliki”: wynik zachowany przy przełączaniu zakładek i nawigacji.
     @Published private(set) var largeFiles: [FileEntry]?
+    /// Audyt 2 (3.3): czy lista dużych plików jest pełna (limit czasu, katalogi bez dostępu).
+    @Published private(set) var largeFilesCompleteness = DiskAnalyzer.Completeness()
     @Published private(set) var largeLoading = false
     /// P1-4: elementy bieżącego folderu, których nie da się odczytać (brak uprawnień / Pełnego dostępu do dysku) – nie ma ich na mapie, ale nie znikają bez śladu.
     @Published private(set) var inaccessible: [String] = []
@@ -197,7 +199,8 @@ final class DiskMapStore: ObservableObject {
 
     var current: String { path.last ?? rootPath }
     var total: UInt64 { nodes.reduce(0) { $0 + $1.size } }
-    var selectedTotal: UInt64 { selected.reduce(0) { $0 + (selectedSizes[$1] ?? 0) } }
+    /// Audyt 2 (3.9): plik w zaznaczonym folderze nie jest liczony drugi raz.
+    var selectedTotal: UInt64 { selected.filter { p in !selected.contains { PathTools.isWithin(p, $0) && p != $0 } }.reduce(0) { $0 + (selectedSizes[$1] ?? 0) } }
     var selectedPaths: [String] { selected.sorted() }
 
     /// Synchronicznie pokazuje wynik z pamięci (albo pusty widok, gdy folderu jeszcze nie liczono).
@@ -513,7 +516,13 @@ final class DiskMapStore: ObservableObject {
     func canToggle(_ path: String, in group: DuplicateGroup) -> Bool { canToggle(path, inGroup: group.paths) }
 
     func canToggle(_ path: String, inGroup paths: [String]) -> Bool {
-        selected.contains(path) || paths.filter { !selected.contains($0) }.count > 1
+        // Audyt 2 (3.9): kopia jest „zaznaczona” także wtedy, gdy zaznaczono folder, w którym leży (np. na mapie) – inaczej dałoby się usunąć wszystkie.
+        selected.contains(path) || paths.filter { !isCoveredBySelection($0) }.count > 1
+    }
+
+    /// Ścieżka zaznaczona wprost albo leżąca w zaznaczonym folderze.
+    func isCoveredBySelection(_ path: String) -> Bool {
+        selected.contains(path) || selected.contains { PathTools.isWithin(path, $0) && path != $0 }
     }
 
     // MARK: Podobne zdjęcia (P2-13, część) – tylko odczyt; usuwanie wyłącznie przez W5
@@ -583,7 +592,8 @@ final class DiskMapStore: ObservableObject {
         if largeLoading { return }
         if !force, largeFiles != nil { return }
         largeLoading = true
-        largeFiles = await provider.largeFiles(minBytes: 500_000_000, olderThanDays: nil, limit: 50)
+        let r = await provider.largeFilesScan(minBytes: 500_000_000, olderThanDays: nil, limit: 50)
+        largeFiles = r.files; largeFilesCompleteness = r.completeness
         largeLoading = false
     }
 

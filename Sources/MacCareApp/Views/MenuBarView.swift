@@ -32,7 +32,7 @@ struct MenuBarView: View {
                 Spacer()
                 Button("Zakończ") { NSApp.terminate(nil) }.buttonStyle(.soft)
             }
-            Text("Tryb: \(model.isReadOnlyMode ? "tylko odczyt" : "Edycja")").font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textTertiary)
+            Text(model.isReadOnlyMode ? String(localized: "Tryb: tylko odczyt") : String(localized: "Tryb: Edycja")).font(Theme.Typo.caption).foregroundStyle(Theme.Palette.textTertiary)
         }
         .padding(14).frame(width: 300)
     }

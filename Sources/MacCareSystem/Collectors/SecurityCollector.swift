@@ -36,6 +36,7 @@ public struct SecurityCollector: Sendable {
         p.xprotectRemediatorVersion = Self.bundleVersion(xprotectAppPlist)
         p.fullDiskAccessGranted = Self.probeFullDiskAccess(path: fdaProbePath)
         p.listeningExternalPorts = Self.parseListeningPorts(rPorts.output).filter { $0.external }.map { "\($0.process) (pid \($0.pid)) → \($0.address)" }
+        p.portsRead = !rPorts.timedOut && (rPorts.status == 0 || (rPorts.status == 1 && rPorts.output.isEmpty))   // lsof: 1 = nic nie nasłuchuje
         return p
     }
 

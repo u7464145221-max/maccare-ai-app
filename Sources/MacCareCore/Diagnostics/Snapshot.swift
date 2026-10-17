@@ -214,6 +214,8 @@ public struct SecurityPosture: Codable, Sendable, Equatable {
     public var xprotectRemediatorVersion: String?
     public var fullDiskAccessGranted: Bool?
     public var listeningExternalPorts: [String] = []
+    /// Audyt 2 (3.4): czy listę portów udało się odczytać (nil/false = nieznane – nie „0 portów”).
+    public var portsRead: Bool? = nil
     public init() {}
 }
 
@@ -301,33 +303,33 @@ public struct SystemSnapshot: Codable, Sendable {
         }
         if let m = memory {
             add("mem.pressure", "kern.memorystatus_vm_pressure_level", String(localized: "Ciśnienie pamięci"), m.pressure.label)
-            add("mem.used", "host_statistics64", String(localized: "Pamięć w użyciu"), "\(ByteFormat.string(m.used)) z \(ByteFormat.string(m.total))", Double(m.used), "B")
+            add("mem.used", "host_statistics64", String(localized: "Pamięć w użyciu"), String(localized: "\(ByteFormat.string(m.used)) z \(ByteFormat.string(m.total))"), Double(m.used), "B")
             add("mem.compressed", "host_statistics64", String(localized: "Pamięć skompresowana"), ByteFormat.string(m.compressed), Double(m.compressed), "B")
             add("mem.swap", "sysctl vm.swapusage", String(localized: "Użycie swap"), ByteFormat.string(m.swapUsed), Double(m.swapUsed), "B")
-            if let po = m.pageoutsPerSec { add("mem.pageouts", "host_statistics64", "Zrzuty stron na dysk", String(format: "%.0f/s", po), po, "1/s") }
+            if let po = m.pageoutsPerSec { add("mem.pageouts", "host_statistics64", String(localized: "Zrzuty stron na dysk"), String(format: "%.0f/s", po), po, "1/s") }
         }
         if let v = bootVolume {
-            add("disk.free", "URLResourceKey.volumeAvailableCapacityForImportantUsage", "Wolne miejsce (dysk startowy)",
-                "\(ByteFormat.string(v.availableImportant)) z \(ByteFormat.string(v.total)) (\(Int(v.freeFraction * 100))%)", Double(v.availableImportant), "B")
-            if v.purgeable > 0 { add("disk.purgeable", "volumeAvailableCapacity vs ForImportantUsage", "Miejsce do odzyskania przez system (purgeable)", ByteFormat.string(v.purgeable), Double(v.purgeable), "B") }
+            add("disk.free", "URLResourceKey.volumeAvailableCapacityForImportantUsage", String(localized: "Wolne miejsce (dysk startowy)"),
+                String(localized: "\(ByteFormat.string(v.availableImportant)) z \(ByteFormat.string(v.total)) (\(Int(v.freeFraction * 100))%)"), Double(v.availableImportant), "B")
+            if v.purgeable > 0 { add("disk.purgeable", "volumeAvailableCapacity vs ForImportantUsage", String(localized: "Miejsce do odzyskania przez system (purgeable)"), ByteFormat.string(v.purgeable), Double(v.purgeable), "B") }
         }
         if let snaps = localSnapshots {
             let newest = snaps.max().map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "—"
-            add("tm.snapshots", "tmutil listlocalsnapshotdates", "Lokalne migawki Time Machine", snaps.isEmpty ? "brak" : "\(snaps.count) (najnowsza: \(newest))", Double(snaps.count))
+            add("tm.snapshots", "tmutil listlocalsnapshotdates", String(localized: "Lokalne migawki Time Machine"), snaps.isEmpty ? String(localized: "brak") : String(localized: "\(snaps.count) (najnowsza: \(newest))"), Double(snaps.count))
         }
         if let io = diskIO {
-            add("disk.io", "IOBlockStorageDriver Statistics", "Transfer dysku (odczyt/zapis)",
+            add("disk.io", "IOBlockStorageDriver Statistics", String(localized: "Transfer dysku (odczyt/zapis)"),
                 "\(ByteFormat.string(UInt64(io.readBytesPerSec)))/s / \(ByteFormat.string(UInt64(io.writeBytesPerSec)))/s", io.readBytesPerSec + io.writeBytesPerSec, "B/s")
             if let l = io.avgLatencyMs { add("disk.latency", "IOBlockStorageDriver Statistics", String(localized: "Średni czas operacji dysku"), String(format: "%.1f ms", l), l, "ms") }
         }
         if let b = battery {
-            add("bat.percent", "IOPowerSources", String(localized: "Poziom naładowania"), "\(b.percent)%\(b.isCharging ? " (ładowanie)" : "")", Double(b.percent), "%")
+            add("bat.percent", "IOPowerSources", String(localized: "Poziom naładowania"), b.isCharging ? String(localized: "\(b.percent)% (ładowanie)") : "\(b.percent)%", Double(b.percent), "%")
             if let c = b.cycleCount { add("bat.cycles", "AppleSmartBattery CycleCount", String(localized: "Cykle ładowania"), "\(c)", Double(c)) }
-            if let h = b.healthPercent { add("bat.health", b.healthSource, "Kondycja baterii", String(format: "%.0f%%", h), h, "%") }
-            if let cond = b.condition { add("bat.condition", b.conditionSource ?? "IOPowerSources BatteryHealth", "Stan baterii wg systemu", cond) }
-            if let temp = b.temperatureC { add("bat.temp", "AppleSmartBattery Temperature", "Temperatura baterii", String(format: "%.1f °C", temp), temp, "°C") }
+            if let h = b.healthPercent { add("bat.health", b.healthSource, String(localized: "Kondycja baterii"), String(format: "%.0f%%", h), h, "%") }
+            if let cond = b.condition { add("bat.condition", b.conditionSource ?? "IOPowerSources BatteryHealth", String(localized: "Stan baterii wg systemu"), cond) }
+            if let temp = b.temperatureC { add("bat.temp", "AppleSmartBattery Temperature", String(localized: "Temperatura baterii"), String(format: "%.1f °C", temp), temp, "°C") }
         }
-        if let th = thermal { add("thermal.state", "ProcessInfo.thermalState", "Stan termiczny", th.label, Double(th.rawValue)) }
+        if let th = thermal { add("thermal.state", "ProcessInfo.thermalState", String(localized: "Stan termiczny"), th.label, Double(th.rawValue)) }
         let groups = appGroups()
         var cpuGroups = Array(groups.sorted(by: { $0.cpuPercent > $1.cpuPercent }).prefix(5)).filter { $0.cpuPercent >= 1 }
         var memGroups = Array(groups.sorted(by: { $0.memory > $1.memory }).prefix(5))

@@ -11,7 +11,7 @@
  Pominięto %lld (nie spełniały zasad bezpieczeństwa lub zmieniły się od zaznaczenia).
  Z tego %@ system może zwolnić sam (purgeable).
  · niemierzalnych procesów systemowych: %lld (bez uprawnień nie widać ich zużycia)
- · powrót do odczytu za %@
+ · tylko „Przenieś do Kosza” (Moje pliki, Porządki, Aplikacje)
  · zajęte %@ (resztę trzymają migawki lub klony%@)
  · zmiana %@
  – aktualizacja systemu jest szczególnie ważna
@@ -21,12 +21,14 @@
 %@ do rozważenia
 %@ mocno obciąża procesor
 %@ obciąża procesor (%lld%%)
-%@ oceny eksperckiej i %@ w trybie Prostym.
+%@ oceny eksperckiej i są ukryte w trybie Prostym.
 %@ od %@
 %@ podobnych zdjęć (sprawdzono %lld)
 %@ trafi do Kosza (%@). Miejsce na dysku wróci dopiero po opróżnieniu Kosza w Finderze.
 %@ trafi do Kosza. Miejsce na dysku wróci dopiero po opróżnieniu Kosza w Finderze.
 %@ wewnątrz folderów bez dostępu – ich rozmiary są zaniżone
+%@ z %@
+%@ z %@ (%lld%%)
 %@ z %@ w użyciu
 %@ z %@ · ciśnienie %@
 %@ zajmuje dużo pamięci, choć nic nie robi
@@ -43,7 +45,6 @@
 %@ · wszystkie systemowe
 %@ · zmiana %@ · ostatnio użyty %@
 %@, %@, %@
-%@. Zobaczysz %@ po skanie albo w trybie Profesjonalnym.
 %@: %@ → %@ · %@
 %@: Kosz opróżnia się osobnym narzędziem
 %@: aplikacja %@ jest uruchomiona
@@ -56,6 +57,7 @@
 %@: odrzucone przez politykę ścieżek
 %@: zajęte %@ z %@
 %@: zmienił się od wyboru – odśwież listę
+%lld (najnowsza: %@)
 %lld cykli
 %lld do instalacji
 %lld proc. · %@
@@ -64,12 +66,14 @@
 %lld różnych programów
 %lld wskazanych identyfikatorów nie istnieje w kwarantannie.
 %lld%%
+%lld%% (ładowanie)
 %lld/100
 %lld× · %@ · ostatni %@
 , migawek: %lld
 - %@: CPU %lld%%, pamięć %@, procesów %lld%@ [dowód: proc.%@.%@]
 . To tylko podgląd – nic nie zostanie zmienione.
 . To ustawienie systemu – możesz je włączyć samodzielnie w Ustawieniach.
+1 pozycja wymaga oceny eksperckiej i jest ukryta w trybie Prostym.
 ; niemierzalnych procesów systemowych: %lld [dowód: proc.unmeasured]
 ASYSTENT:
 Adres Ollamy nie jest lokalny – zablokowano, aby dane nie opuszczały komputera.
@@ -268,10 +272,11 @@ Edycja
 Edycja wyłącza się sama
 Edycja wyłączona automatycznie po %@ bezczynności – powrót do trybu tylko do odczytu.
 Edycja wyłączona po %@ bezczynności – wróciłem do trybu tylko do odczytu.
-Edycja włączona – tylko „Przenieś do Kosza” (Moje pliki, Porządki, Aplikacje)%@
+Edycja włączona
 Edycja włączona. Zaznacz pliki w „Moje pliki”, aby przenieść je do Kosza.
 Edycja włączona. Zaznaczone pliki przeniesiesz do Kosza w „Moje pliki” (widok Profesjonalny).
 Edycja – odblokowuje wyłącznie przenoszenie do Kosza: pliki zaznaczone w „Moje pliki”, pozycje zaznaczone w Porządkach, odinstalowanie wybranej aplikacji i zaznaczone pozostałości po aplikacjach, zawsze po potwierdzeniu. Czyszczenie przez kwarantannę, trwałe usuwanie, opróżnianie Kosza, agenci autostartu i polecenia administratora czekają na poprawki bezpieczeństwa kwarantanny. Asystent AI nigdy nie przełącza trybu.
+Edycja: %@ do powrotu do odczytu
 Edycja: działa tylko „Przenieś do Kosza” (Moje pliki, Porządki, odinstalowanie i pozostałości po aplikacjach); wszystko inne czeka na zakończenie poprawek bezpieczeństwa kwarantanny.
 Element chroniony przez system (SIP) albo zablokowany przed zmianami
 Element logowania
@@ -279,7 +284,6 @@ Element nie istnieje: %@
 Element w chmurze – Porządki go nie ruszają (usunięcie skasowałoby go też w chmurze)
 Element w tle (BTM)
 Elementy (%lld)
-Elementy przeniesione przez Czyszczenie pojawią się tutaj i będzie można je przywrócić.
 Elementy trafiły do kwarantanny (przeniesienie w obrębie dysku) lub do Kosza – wolne miejsce zwiększy się dopiero po opróżnieniu kwarantanny (automatycznie po 7 dniach) lub Kosza. Pomiar obejmuje też inne zapisy na dysku.
 Elementy trafiły do systemowego Kosza (przeniesienie w obrębie dysku) – wolne miejsce zwiększy się dopiero po opróżnieniu Kosza w Finderze. Możesz je stamtąd przywrócić (Odłóż).
 Elementy w katalogu tymczasowym nieużywane od 3 dni. Długo działające programy mogą tu trzymać blokady i gniazda – dlatego nie są zaznaczane same.
@@ -335,6 +339,8 @@ Jak cofnąć
 Jak wygląda stan baterii i temperatury?
 Jedna aplikacja mocno obciąża procesor
 Jedno skanowanie sprawdzi porządki, ochronę i wydajność – bez zmieniania czegokolwiek.
+Jest jeszcze %@. Zobaczysz je po skanie albo w trybie Profesjonalnym.
+Jest jeszcze 1 mniej ważna sprawa. Zobaczysz ją po skanie albo w trybie Profesjonalnym.
 JetBrains – pamięć podręczna IDE
 Katalogi w ~/Library/Caches bez dedykowanej reguły. Zwykle odtwarzalne, ale nie zawsze – do przejrzenia, domyślnie niezaznaczone.
 Każda próba operacji – także odrzucona lub anulowana – zostawia tu ślad.
@@ -347,6 +353,7 @@ Kolor = przeważający rodzaj zawartości
 Komponent
 Kondycja < 60%
 Kondycja < 80%
+Kondycja baterii
 Konfiguracja DNS tego Maca (serwery, domeny wyszukiwania) – bez wysyłania zapytań.
 Kontekst przekracza okno modelu
 Kontenery
@@ -372,6 +379,7 @@ Liczba wyników
 Liczę rozmiary folderów…
 Liczę rozmiary…
 Limit narzędzi wyczerpany. Udziel odpowiedzi końcowej (type=final) na podstawie zebranych danych.
+Listy autostartu jeszcze nie odczytano albo odczyt się nie udał.
 Logi Docker Desktop starsze niż 7 dni. Kontenery, obrazy i wolumeny nie są ruszane.
 Logi OrbStack starsze niż 7 dni. Maszyny i kontenery nie są ruszane.
 Logi serwera LM Studio starsze niż 7 dni. Modele zostają.
@@ -379,6 +387,7 @@ Logi serwera Ollama starsze niż 7 dni. Modele zostają.
 Logi zapisane przez aplikacje. Starsze niż 14 dni.
 Lokalizacje bez uprawnień są raportowane jako nieczytelne.
 Lokalne kopie otwieranych załączników. Oryginały pozostają w wiadomościach na serwerze. Nie dotyczy operacji na serwerze pocztowym.
+Lokalne migawki Time Machine
 Lokalny model jest niedostępny.
 Lokalny model nie działa: Ollama nie odpowiada pod 127.0.0.1:11434. Uruchom aplikację Ollama (dane nie opuszczają Maca).
 MLX nie jest włączony
@@ -406,6 +415,7 @@ Metodologia oceny v%@
 Metodologia v%@: każdy komponent liczony wyłącznie z pomiarów, brak danych nie podnosi oceny.
 Microsoft Edge – pamięć podręczna
 Microsoft Teams – pamięć podręczna
+Miejsce do odzyskania przez system (purgeable)
 Miejsce docelowe jest zajęte: %@
 Miejsce przywrócenia jest niedozwolone – nic nie ruszono: %@
 Miejsce przywrócenia leży poza katalogiem domowym i lokalizacjami czyszczenia
@@ -458,6 +468,7 @@ Nic nie zostanie wykonane przed kliknięciem „%@”.
 Nic nie zostanie zmienione.
 Nic niepokojącego nie znaleziono
 Nic niepokojącego nie znaleziono.
+Nic niepokojącego w odczytanych danych – części nie udało się odczytać
 Nie nadpisuje istniejących plików.
 Nie odinstalowano: %@.
 Nie opróżniono Kosza: brak dostępu do jego zawartości (uprawnienia lub Pełny dostęp do dysku). Nic nie usunięto.
@@ -465,6 +476,8 @@ Nie przeniesiono do Kosza
 Nie przyspiesza ogólnie systemu – rozwiązuje tylko nieaktualne wpisy DNS.
 Nie sprawdzono
 Nie udało się odczytać informacji o wydaniu.
+Nie udało się odczytać listy portów – to nie znaczy, że żaden nie jest otwarty.
+Nie udało się odczytać raportów awarii – to nie znaczy, że ich nie ma.
 Nie udało się otworzyć bazy historii – historia i ustawienia z tej sesji nie zostaną zapisane po zamknięciu aplikacji.
 Nie udało się przenieść aplikacji do Kosza (%@). Jej danych nie ruszono – usuń aplikację w Finderze.
 Nie udało się przenieść: %@
@@ -488,6 +501,7 @@ Nie znaleziono modeli Ollamy (aplikacja Ollama nie działa albo nie ma pobranych
 Nie znaleziono nic do usunięcia w znanych lokalizacjach.
 Nie znaleziono podobnych zdjęć wśród %@.
 Nie znaleziono pozostałości.
+Nie znaleziono – ale wynik jest niepełny (patrz wyżej).
 Niedozwolone znaki sterujące w %@
 Niedozwolony znak w ścieżce
 Nieprawidłowa etykieta agenta
@@ -512,6 +526,7 @@ Obciążenie i pamięć
 Obciążenie utrzymuje się od %lld s – to nie jest chwilowy skok.
 Obrazy
 Obrazy dysków
+Ocena bez potrąceń, ale %@ uwagi – szczegóły poniżej.
 Ocena stanu
 Ocena stanu: %lld/100
 Ocena stanu: %lld/100 – z jawną metodologią i dowodami.
@@ -561,6 +576,7 @@ Operacje
 Operacji nie można cofnąć.
 Operacji nie wykonuje się w trakcie analizy. Umieść ją w proposed_actions odpowiedzi końcowej.
 Operację można cofnąć.
+Opróżnianie Kosza MacCare tylko pokazuje – opróżnisz go w Finderze (Kosz → Opróżnij).
 Opróżnienie Kosza
 Opróżnienie Kosza (%@)
 Opróżnienie Kosza – brak dostępu do Kosza
@@ -666,6 +682,7 @@ Poproszono „%@” o zamknięcie (%lld proc.). Aplikacja może zapytać o zapis
 Porty
 Porządki
 Porządki i odzyskiwalne miejsce
+Porządki przenoszą dziś elementy do systemowego Kosza (przywrócisz je w Finderze) – kwarantanna jest wyłączona.
 Porządki – przeniesienie do Kosza
 Porządki: %@ do Kosza
 Porównuję miniatury zdjęć…
@@ -673,7 +690,6 @@ Porównuję pliki – przy dużych folderach może to potrwać kilka minut.
 Potwierdzone pomiarem
 Powiadamiaj o ważnych sprawach
 Powiadomienia
-Powiadomienia i progi ostrzeżeń pojawią się w kolejnej wersji.
 Powody
 Poza katalogiem domowym – inne wolumeny niż startowy nie są obsługiwane (Kosz działa tam inaczej)
 Poza zakresem Edycji – w trybie Edycja działa przenoszenie do Kosza (zaznaczone pliki, Porządki, odinstalowanie, pozostałości po aplikacjach); kwarantanna, opróżnianie Kosza i operacje systemowe czekają na poprawki bezpieczeństwa
@@ -813,7 +829,9 @@ Spróbuj ponownie
 Stabilność
 Stan Maca w skrócie (procesor, pamięć, wolne miejsce, aktualizacje) i szybki Smart Scan. Tylko odczyt.
 Stan Maca: %@
+Stan baterii wg systemu
 Stan okien
+Stan termiczny
 Stan termiczny systemu. Czujników SMC nie odczytujemy (wymagają prywatnych interfejsów), więc nie pokazujemy temperatur CPU/GPU.
 Stan termiczny: %@. macOS obniża taktowanie, żeby się schłodzić – to wyjaśnia spadek wydajności w tym momencie.
 Stan wg systemu: %@
@@ -854,6 +872,7 @@ Ta operacja czeka na poprawki bezpieczeństwa kwarantanny – na razie tylko pod
 Ta operacja jest dostępna w trybie Profesjonalnym.
 Także pliki w chmurze – usunie je też z chmury (%lld)
 Temperatura
+Temperatura baterii
 Temperatury poszczególnych rdzeni są niedostępne bez prywatnych interfejsów systemu – nie zgadujemy. Próbka z %@.
 Ten Mac nie ma baterii lub system nie udostępnia danych.
 Ten moduł jest w budowie – funkcja nie jest jeszcze dostępna.
@@ -866,6 +885,7 @@ To samo w sobie nie jest błędem. Restart instaluje oczekujące poprawki i zwal
 To spowalnia pracę. Pomoże zamknięcie dużych aplikacji albo restart.
 To urządzenie nie obsługuje Apple Intelligence.
 To wyłącznie odczyt: próbka trwa ok. 1 sekundy i niczego nie zmienia w systemie.
+Transfer dysku (odczyt/zapis)
 Trwale opróżnia Kosz użytkownika.
 Trwale usunięto %@ z kwarantanny (%@)
 Trwale usunięto %@ z kwarantanny (%@).%@
@@ -882,7 +902,8 @@ Tryb ukryty zapory
 Tryb widoku
 Tryb wykonania
 Tryb zmieniono na diagnostykę
-Tryb: %@
+Tryb: Edycja
+Tryb: tylko odczyt
 Twój Mac
 Twój Mac działa dobrze.
 Tylko Intel
@@ -905,7 +926,7 @@ Uprawnienie nie jest zapamiętywane i nie powstają żadne usługi pomocnicze �
 Uruchamiane automatycznie programy z katalogu domowego lub Homebrew nie mają zaufanego podpisu – to typowe dla własnych skryptów i środowisk deweloperskich, a nie dla złośliwego oprogramowania. Pierwsze: %@%@.
 Uruchamiane mogą być aplikacje bez weryfikacji pochodzenia.
 Uruchom Smart Scan
-Uruchom Smart Scan w Panelu lub skan w Czyszczeniu.
+Uruchom Smart Scan albo skan w Porządkach.
 Uruchom odczyt
 Ustalenia
 Ustawienia
@@ -944,6 +965,7 @@ Wolne < 10%
 Wolne < 15%
 Wolne < 25%
 Wolne < 5%
+Wolne miejsce (dysk startowy)
 Wolne miejsce na dysku
 Wolne na dysku
 Wpis kwarantanny wskazuje poza jej katalog (uszkodzony lub podmieniony manifest) – nic nie ruszono: %@
@@ -975,6 +997,8 @@ Wymuś zamknięcie (utrata niezapisanych danych)
 Wynik
 Wynik częściowy: przekroczono limit czasu lub liczby plików – nie wszystkie pliki zostały porównane.
 Wynik częściowy: przekroczono limit czasu lub liczby zdjęć – nie wszystkie zdjęcia zostały porównane.
+Wynik niepełny: brak dostępu do %lld folderów (np. bez Pełnego dostępu do dysku).
+Wynik niepełny: przeszukiwanie przerwano po limicie czasu – część folderów nie została sprawdzona.
 Wynik ogólny:
 Wyniki kompilacji Go.
 Wyniki kompilacji i indeksy. Xcode odbuduje je przy następnym buildzie.
@@ -1009,6 +1033,7 @@ Z czego wynika ocena
 Za chwilę powiem, jak się czuje Twój Mac.
 Za chwilę system poprosi o hasło administratora, żeby wykonać jednorazowy odczyt.
 Za dużo elementów w %@
+Za dużo zaznaczonych elementów
 Za mało danych, żeby ocenić stan (pokrycie %lld%%).
 Za mało pamięci: %@
 Zacznij od nowa
@@ -1054,12 +1079,14 @@ Zaznaczone dane aplikacji w ~/Library
 Zaznaczone pozostałości trafią do Kosza – przywrócisz je w Finderze
 Zaznaczone pozostałości w ~/Library
 Zaznaczone pozycje trafią do Kosza – miejsce wróci po jego opróżnieniu w Finderze.
+Zaznaczono %lld elementów – jednorazowo można przenieść najwyżej %lld. Zaznacz folder zamiast pojedynczych plików albo podziel operację.
 Zaznaczono %lld · odzyskasz ok. %@
 Zaznaczono: %lld · %@
 Załączniki Poczty (lokalne)
 Zbieram dane
 Zbieram pierwsze pomiary…
 Zbieram pomiary i analizuję…
+Zbieram pomiary wydajności…
 Zbieram pomiary…
 Zezwól także na pliki w chmurze (usunie je też z chmury) – osobny przełącznik użytkownika
 Zmiana rozmiaru od pomiaru z %@
@@ -1075,6 +1102,7 @@ Znajdź pamięć podręczną, logi i pozostałości, które można bezpiecznie o
 Zniknęło od %@: %@ · %@
 Zobacz, co obciąża procesor, pamięć i baterię – i czy powodem jest aplikacja, czy system.
 Zostało %@. Porządki w MacCare pokażą, co można bezpiecznie przenieść do Kosza.
+Zrzuty stron na dysk
 Zwolnienie CPU/pamięci
 Zwolnienie miejsca na dysku
 Zwolnienie miejsca po odinstalowanych aplikacjach
@@ -1095,6 +1123,7 @@ brak mierzalnego efektu
 błąd
 chroniona lokalizacja
 chroniony obszar
+cykle: —
 czeka na zgodę
 dane aplikacji
 do 14B parametrów (np. qwen2.5:14b)
@@ -1126,6 +1155,7 @@ metodologia %@
 model działa w chmurze – MacCare używa wyłącznie modeli lokalnych
 na baterii
 nie można otworzyć bazy %@
+nie udało się odczytać
 nie wiadomo
 nieodwracalne
 niezaznaczone
@@ -1181,12 +1211,14 @@ wyłączone
 włączone
 z %@ zajętych – resztę trzymają migawki lub klony
 z %@ · skompresowane %@
+z reguły
 za mało danych
 zabronione
 zajęte %@
 zajęte na dysku
 zakres: %@
-zaproponował %@
+zaplanowane
+zaproponował asystent AI
 zasilacz
 zatwierdzono
 zaznaczone

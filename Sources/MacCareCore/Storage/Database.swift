@@ -105,7 +105,8 @@ public final class HistoryStore: AuditSink, @unchecked Sendable {
         // 1 → 2 (audyt 16.10): znacznik zagęszczonej próbki jako kolumna. Wcześniej rozpoznawany po czasie „pełna godzina + 30 min”, więc zwykła
         // próbka zapisana dokładnie o hh:30:00 była brana za średnią i zostawała obok niej (dwa punkty tej samej godziny).
         1: { db in
-            try db.exec("ALTER TABLE samples ADD COLUMN agg INTEGER NOT NULL DEFAULT 0")
+            let hasAgg = try db.query("PRAGMA table_info(samples)").contains { $0["name"] == .text("agg") }
+            if !hasAgg { try db.exec("ALTER TABLE samples ADD COLUMN agg INTEGER NOT NULL DEFAULT 0") }   // powtarzalne: kolumna mogła już powstać
             try db.exec("UPDATE samples SET agg = 1 WHERE (at - CAST(at/3600 AS INTEGER)*3600) = 1800")
         },
     ]
@@ -168,11 +169,15 @@ public final class HistoryStore: AuditSink, @unchecked Sendable {
             attempt("schemat bazy", ()) { throw DatabaseError(message: String(localized: "baza zapisana przez nowszą wersję MacCare (schemat \(v) > \(Self.schemaVersion)) – nie jest zmieniana")) }
             return
         }
-        for from in (stored ?? Self.schemaVersion)..<Self.schemaVersion {
-            guard let step = Self.migrations[from] else { throw DatabaseError(message: "brak migracji schematu \(from) → \(from + 1)") }
-            try db.transaction { try step(db) }
+        // Audyt 2: migracje i zapis wersji w JEDNEJ transakcji (przerwanie nie zostawia „zmigrowane, ale wersja stara”), a każdy krok jest powtarzalny
+        // (np. po uruchomieniu v0.1.0, która zawsze zapisuje schemat 1, na bazie już zmigrowanej).
+        try db.transaction {
+            for from in (stored ?? Self.schemaVersion)..<Self.schemaVersion {
+                guard let step = Self.migrations[from] else { throw DatabaseError(message: "brak migracji schematu \(from) → \(from + 1)") }
+                try step(db)
+            }
+            try db.run("INSERT OR REPLACE INTO meta(key, value) VALUES('schema', ?)", [.text(String(Self.schemaVersion))])
         }
-        try db.run("INSERT OR REPLACE INTO meta(key, value) VALUES('schema', ?)", [.text(String(Self.schemaVersion))])
     }
 
     // MARK: Audyt

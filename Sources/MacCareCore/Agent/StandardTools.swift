@@ -15,6 +15,10 @@ public protocol DiagnosticsProvider: Sendable {
 
 public extension DiagnosticsProvider {
     func verificationScan() async -> CleanupScanResult { await cleanupScan(categories: nil) }
+    /// Domyślnie (dostawcy testowi): kompletność nieznana ⇒ traktowana jak pełna lista dostarczona przez dostawcę.
+    func largeFilesScan(minBytes: UInt64, olderThanDays: Int?, limit: Int) async -> LargeFilesResult {
+        LargeFilesResult(files: await largeFiles(minBytes: minBytes, olderThanDays: olderThanDays, limit: limit), completeness: .init())
+    }
 }
 
 /// Operacje systemowe wymagające API macOS. Każda implementacja MUSI sama weryfikować cel (np. nazwę procesu).

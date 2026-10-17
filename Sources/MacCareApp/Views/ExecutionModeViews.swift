@@ -54,8 +54,9 @@ struct ExecutionModeIndicator: View {
             HStack(spacing: Theme.Space.s) {
                 Image(systemName: "pencil.circle.fill")
                 TimelineView(.periodic(from: .now, by: 1)) { _ in
-                    let left = model.executionState.remainingIdle.map { String(localized: " · powrót do odczytu za \(Self.clock($0))") } ?? ""
-                    Text("Edycja włączona – tylko „Przenieś do Kosza” (Moje pliki, Porządki, Aplikacje)\(left)").font(Theme.Typo.caption.weight(.semibold)).lineLimit(1).truncationMode(.tail)
+                    // audyt 2 (3.14): odliczanie NAJPIERW – przy węższym oknie ucina się opis zakresu, nie czas do powrotu
+                    let left = model.executionState.remainingIdle.map { String(localized: "Edycja: \(Self.clock($0)) do powrotu do odczytu") } ?? String(localized: "Edycja włączona")
+                    Text(left + String(localized: " · tylko „Przenieś do Kosza” (Moje pliki, Porządki, Aplikacje)")).font(Theme.Typo.caption.weight(.semibold).monospacedDigit()).lineLimit(1).truncationMode(.tail)
                 }
             }
             .foregroundStyle(Theme.Palette.warning)

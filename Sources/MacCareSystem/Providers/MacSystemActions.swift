@@ -69,7 +69,7 @@ public struct MacSystemActions: SystemActions {
             let path = launchAgentsDirectory + "/" + f
             guard let st = FileStat.of(path), st.isRegular, !st.isSymlink,
                   PathTools.canonical((path as NSString).deletingLastPathComponent) == dirCanonical,
-                  let data = FileManager.default.contents(atPath: path),
+                  let data = SafeRead.regularFile(path, maxBytes: 1 << 20),
                   let obj = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],   // try? świadomie: dane nieufne lub uszkodzone ⇒ traktowane jako brak danych
                   (obj["Label"] as? String) == label else { continue }
             return path
